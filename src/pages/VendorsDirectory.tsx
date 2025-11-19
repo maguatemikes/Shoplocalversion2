@@ -1928,6 +1928,14 @@ function VendorBusinessCard({
           </span>
         </div>
 
+        {/* Distance - if available */}
+        {vendor.distance !== undefined && (
+          <div className="flex items-center gap-1.5 text-xs text-sky-600 mb-3">
+            <Navigation className="w-3.5 h-3.5" />
+            <span>{formatDistance(vendor.distance)}</span>
+          </div>
+        )}
+
         {/* Description */}
         <p className="text-sm text-gray-600 line-clamp-2 mb-4 leading-relaxed">
           {vendor.tagline}
@@ -1938,11 +1946,6 @@ function VendorBusinessCard({
           <div className="flex items-center gap-1.5 text-gray-600">
             <MapPin className="w-4 h-4 text-gray-400" />
             <span className="truncate">{vendor.location}</span>
-            {vendor.distance !== undefined && (
-              <span className="text-sky-600 ml-1">
-                • {formatDistance(vendor.distance)}
-              </span>
-            )}
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
