@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, Grid3x3, Tag, Barcode, BadgePercent, RotateCcw } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Grid3x3, Tag, Barcode, BadgePercent, RotateCcw, Navigation, Loader2, MapPin } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
 import { ProductCard } from '../components/ProductCard';
-import { products } from '../lib/mockData';
+import { products, vendors } from '../lib/mockData';
 import {
   Select,
   SelectContent,
@@ -12,6 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { Button } from '../components/ui/button';
+import { calculateDistance } from '../lib/distance';
+
+interface UserLocation {
+  lat: number;
+  lon: number;
+}
 
 export function ProductCatalog() {
   const navigate = useNavigate();
@@ -21,8 +28,146 @@ export function ProductCatalog() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
   const [upcFilter, setUpcFilter] = useState<string>('');
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualZipCode, setManualZipCode] = useState('');
 
-  const filteredProducts = products
+  // Calculate distances for products
+  const productsWithDistance = products.map(product => {
+    if (userLocation) {
+      const vendor = vendors.find(v => v.slug === product.vendorSlug);
+      
+      if (vendor?.latitude && vendor?.longitude) {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lon,
+          parseFloat(vendor.latitude),
+          parseFloat(vendor.longitude)
+        );
+        
+        return { ...product, distance };
+      }
+    }
+    
+    return product;
+  });
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      setShowManualLocation(true);
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const newLocation = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        };
+        setUserLocation(newLocation);
+        setLocationLoading(false);
+        setLocationError(null);
+        
+        // Auto-set sort to nearest when location is enabled
+        setSortBy('nearest');
+        
+        console.log("📍 User location detected:", newLocation);
+      },
+      (error) => {
+        setLocationLoading(false);
+        
+        // Automatically show manual location input when geolocation fails
+        setShowManualLocation(true);
+        
+        let errorMessage = "Unable to detect your location.";
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location permission denied. Please enter your zip code below.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable. Please enter your zip code below.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out. Please enter your zip code below.";
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        console.log("📍 Geolocation unavailable, showing manual entry:", errorMessage);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 300000
+      }
+    );
+  };
+
+  // Handle manual location entry (using zip code or city)
+  const handleManualLocation = async () => {
+    if (!manualZipCode.trim()) {
+      setLocationError("Please enter a zip code or city name");
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError(null);
+
+    try {
+      // Use Nominatim (OpenStreetMap) geocoding API - free and no API key needed
+      const query = encodeURIComponent(manualZipCode.trim());
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=us&limit=1`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'ShopLocal Marketplace Directory'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const newLocation = {
+          lat: parseFloat(data[0].lat),
+          lon: parseFloat(data[0].lon)
+        };
+        
+        setUserLocation(newLocation);
+        setLocationLoading(false);
+        setLocationError(null);
+        setShowManualLocation(false);
+        setSortBy('nearest');
+        
+        console.log("📍 Manual location set:", newLocation, "for:", manualZipCode);
+      } else {
+        setLocationError("Location not found. Please try a valid US zip code or city name.");
+        setLocationLoading(false);
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      setLocationError("Unable to find location. Please try again.");
+      setLocationLoading(false);
+    }
+  };
+
+  // Clear user location
+  const clearUserLocation = () => {
+    setUserLocation(null);
+    setLocationError(null);
+    setShowManualLocation(false);
+    setManualZipCode('');
+    setSortBy('newest');
+    console.log("📍 User location cleared");
+  };
+
+  const filteredProducts = productsWithDistance
     .filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -37,6 +182,7 @@ export function ProductCatalog() {
       if (sortBy === 'price-low') return a.price - b.price;
       if (sortBy === 'price-high') return b.price - a.price;
       if (sortBy === 'popular') return b.isTrending ? 1 : -1;
+      if (sortBy === 'nearest' && a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
       return 0;
     });
 
@@ -59,25 +205,34 @@ export function ProductCatalog() {
           <p className="text-xl text-gray-600">
             Browse unique products from independent sellers
           </p>
+          
+          {/* Use My Location Button */}
+          {/* Removed - duplicated below */}
+          
+          {locationError && (
+            <div className="mt-4 max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {locationError}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Search and Sort */}
       <section className="bg-white border-b border-gray-100 py-6 sticky top-20 z-40 backdrop-blur-md bg-white/95">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-col md:flex-row gap-4 md:items-stretch h-10">
+            <div className="flex-1 relative h-full">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 rounded-xl border-gray-200 bg-gray-50"
+                className="pl-12 h-full rounded-xl border-gray-200 bg-gray-50"
               />
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-[200px] h-12 rounded-xl border-gray-200 bg-gray-50">
+              <SelectTrigger className="w-full md:w-[200px] h-full rounded-xl border-gray-200 bg-gray-50">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -85,6 +240,7 @@ export function ProductCatalog() {
                 <SelectItem value="popular">Most Popular</SelectItem>
                 <SelectItem value="price-low">Price: Low to High</SelectItem>
                 <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="nearest">Nearest to Me</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -228,27 +384,128 @@ export function ProductCatalog() {
 
             {/* Product Grid */}
             <div className="flex-1">
-              <div className="mb-6 flex items-center justify-between">
-                <p className="text-gray-600">
-                  {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
-                </p>
-                {hasActiveFilters && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory('all');
-                      setAcceptsOffers(false);
-                      setBrandFilter('all');
-                      setUpcFilter('');
-                    }}
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear filters
-                  </button>
+              {/* Use My Location Button */}
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <p className="text-gray-600">
+                    {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+                  </p>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleUseMyLocation}
+                      disabled={locationLoading}
+                      className="rounded-lg"
+                      size="sm"
+                    >
+                      {locationLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Getting Location...
+                        </>
+                      ) : userLocation ? (
+                        <>
+                          <MapPin className="w-4 h-4 mr-2 text-green-600" />
+                          Location Set
+                        </>
+                      ) : (
+                        <>
+                          <Navigation className="w-4 h-4 mr-2" />
+                          Use My Location
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Manual Location Toggle or Clear Location */}
+                    {userLocation ? (
+                      <Button
+                        variant="ghost"
+                        onClick={clearUserLocation}
+                        className="rounded-lg text-gray-600 hover:text-red-600"
+                        size="sm"
+                      >
+                        Clear Location
+                      </Button>
+                    ) : !showManualLocation ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowManualLocation(true)}
+                        className="rounded-lg text-gray-600 hover:text-gray-900"
+                        size="sm"
+                      >
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Enter Zip Code
+                      </Button>
+                    ) : null}
+                    
+                    {hasActiveFilters && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedCategory('all');
+                          setAcceptsOffers(false);
+                          setBrandFilter('all');
+                          setUpcFilter('');
+                        }}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        <X className="w-4 h-4" />
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Manual Location Input - Show when geolocation fails */}
+                {showManualLocation && !userLocation && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-3 mb-3">
+                      <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="text-sm text-blue-900 mb-1">Enter Your Location Manually</h3>
+                        <p className="text-xs text-blue-700">
+                          Browser location is blocked. Enter your zip code or city to see distances.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter zip code or city..."
+                        value={manualZipCode}
+                        onChange={(e) => setManualZipCode(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleManualLocation()}
+                        className="flex-1 rounded-lg h-9"
+                        disabled={locationLoading}
+                      />
+                      <Button
+                        onClick={handleManualLocation}
+                        disabled={locationLoading || !manualZipCode.trim()}
+                        className="rounded-lg bg-sky-600 hover:bg-sky-700"
+                        size="sm"
+                      >
+                        {locationLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Set Location"
+                        )}
+                      </Button>
+                    </div>
+                    {locationError && (
+                      <p className="text-xs text-red-600 mt-2">{locationError}</p>
+                    )}
+                  </div>
                 )}
               </div>
-
+              
+              {/* Location Error Message - Only show if not in manual entry mode */}
+              {locationError && !showManualLocation && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {locationError}
+                </div>
+              )}
+              
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProducts.map((product) => (

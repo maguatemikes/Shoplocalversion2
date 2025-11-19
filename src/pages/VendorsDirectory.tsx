@@ -14,6 +14,7 @@ import {
   Store,
   Navigation,
   Loader2,
+  X,
 } from "lucide-react";
 import axios from "axios";
 import { Input } from "../components/ui/input";
@@ -39,6 +40,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../components/ui/sheet";
 import { LeafletMap } from "../components/LeafletMap";
 import { calculateDistance, formatDistance } from "../lib/distance";
 
@@ -252,6 +260,7 @@ export default function VendorsDirectory() {
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("featured");
   const [showMap, setShowMap] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<
     string | null
   >(null);
@@ -1879,7 +1888,7 @@ function VendorBusinessCard({
           </div>
         )}
         {!isClaimed && (
-          <div className="absolute top-4 left-4 bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs shadow-lg backdrop-blur-sm">
+          <div className="absolute top-4 left-4 bg-amber-600 text-white px-2 py-0.5 rounded text-xs font-normal shadow-lg backdrop-blur-sm">
             Unclaimed
           </div>
         )}
