@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, X } from 'lucide-react';
 import { Button } from './ui/button';
@@ -8,10 +8,13 @@ import { products } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface CartItem {
-  product: typeof products[0];
+  id: number;
+  name: string;
+  price: number;
+  vendor: string;
+  image: string;
   quantity: number;
 }
-
 interface CartDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -19,25 +22,24 @@ interface CartDrawerProps {
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { product: products[0], quantity: 2 },
-    { product: products[1], quantity: 1 },
-    { product: products[2], quantity: 3 },
-  ]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
 
-  const updateQuantity = (index: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    const newCart = [...cartItems];
-    newCart[index].quantity = newQuantity;
-    setCartItems(newCart);
-  };
+const updateQuantity = (index: number, newQuantity: number) => {
+  if (newQuantity < 1) return;
 
-  const removeItem = (index: number) => {
-    setCartItems(cartItems.filter((_, i) => i !== index));
-  };
+  setCartItems(prev => {
+    const updated = [...prev];
+    updated[index].quantity = newQuantity;
+    return updated;
+  });
+};
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+const removeItem = (index: number) => {
+  setCartItems(prev => prev.filter((_, i) => i !== index));
+};
+
+const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 500 ? 0 : 25;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
@@ -51,6 +53,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     onOpenChange(false);
     navigate('/products/');
   };
+
+useEffect(() => {
+  if (open) {
+    const stored = JSON.parse(localStorage.getItem("cart") || "[]");
+    setCartItems(stored);
+  }
+}, [open]);
+
+useEffect(() => {
+  localStorage.setItem("cart", JSON.stringify(cartItems));
+}, [cartItems]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -97,11 +110,11 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       }}
                       className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0"
                     >
-                      <ImageWithFallback
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <ImageWithFallback
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
                     </button>
 
                     {/* Details */}
@@ -115,7 +128,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                             }}
                             className="text-sm text-gray-900 hover:text-[#0EA5E9] text-left line-clamp-2"
                           >
-                            {item.product.name}
+                            {item.name}
                           </button>
                           <button
                             onClick={() => {
@@ -124,7 +137,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                             }}
                             className="text-xs text-gray-600 hover:text-[#0EA5E9] block mt-1"
                           >
-                            {item.product.vendor}
+                            {item.vendor}
                           </button>
                         </div>
                         <button
@@ -158,7 +171,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         {/* Price */}
                         <div className="text-right">
                           <p className="text-sm text-gray-900">
-                            ${(item.product.price * item.quantity).toFixed(2)}
+                            ${(item.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>

@@ -52,6 +52,7 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : 0;
 
+
   // Check if stock is low (less than 20 items)
   const isLowStock = product.stock !== undefined && product.stock < 20;
 
@@ -61,10 +62,25 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
    * 
    * @param {React.MouseEvent} e - Click event
    */
-  const handleCardClick = (e: React.MouseEvent) => {
-    const slug = product.name.toLowerCase().replace(/\s+/g, '-');
+ const handleCardClick = (e: React.MouseEvent) => {
+    const slug = product.name.toLowerCase()
+    // Remove accents (same as remove_accents() in WP)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    // Remove HTML-like entities (&amp; → and)
+    .replace(/&.+?;/g, "")
+    // Remove apostrophes (men’s → mens)
+    .replace(/'/g, "")
+    // Convert non-alphanumeric groups to hyphens
+    .replace(/[^a-z0-9]+/g, "-")
+    // Trim hyphens from start/end
+    .replace(/^-+|-+$/g, "")
+    // Collapse multiple hyphens
+    .replace(/-+/g, "-");        // collapse multiple dashes
+    // collapse multiple dashes
     if (onViewProduct) {
       onViewProduct(slug);
+      
     } else {
       navigate(`/product/${slug}`);
     }
@@ -127,9 +143,10 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
         {/* Status Badges - Top Left Corner */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
           {/* Discount Badge */}
-          {hasDiscount && (
+          
+          {hasDiscount  != 0 &&  (
             <span className="px-2.5 py-1 bg-red-600 text-white rounded-lg text-xs">
-              -{discountPercentage}%
+              -{discountPercentage}% 
             </span>
           )}
           
@@ -192,7 +209,7 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
         </button>
         
         {/* Rating & Review Count */}
-        {product.rating && (
+        {product.rating  != 0 && (
           <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -215,10 +232,8 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-lg text-gray-900">${product.price.toFixed(2)}</span>
-              {hasDiscount && (
-                <span className="text-sm text-gray-400 line-through">
-                  ${product.originalPrice!.toFixed(2)}
-                </span>
+              {hasDiscount != 0 && (
+                    <span className="text-lg text-gray-900">${product.price.toFixed(2)}</span>
               )}
             </div>
           </div>

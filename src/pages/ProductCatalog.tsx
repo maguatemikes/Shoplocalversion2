@@ -14,7 +14,7 @@ import {
 } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { calculateDistance } from '../lib/distance';
-
+import { getProducts } from '../api/woo/products';
 interface UserLocation {
   lat: number;
   lon: number;
@@ -28,12 +28,68 @@ export function ProductCatalog() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
   const [upcFilter, setUpcFilter] = useState<string>('');
+  const [products_api, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const perPage = 12; // number of products per page
+  const [page, setPage] = useState<number>(1);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [showManualLocation, setShowManualLocation] = useState(false);
   const [manualZipCode, setManualZipCode] = useState('');
 
+
+useEffect(() => {
+  fetchProducts(1);
+}, []);
+
+const fetchProducts = async (pageNumber: number) => {
+  setLoading(true);
+  try {
+    const data = await getProducts(pageNumber, perPage); // make sure your API accepts page & per_page
+    if (pageNumber === 1) {
+      setProducts(data.mapped);
+    } else {
+      setProducts(prev => [...prev, ...data.mapped]);
+    }
+
+
+    // Check if more pages are available
+    setHasMore(pageNumber * perPage < data.res.total);
+    if(data.res.products.length ===  0){
+      setHasMore(false);
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+  
+
+
+// Load more function
+const loadMoreProducts = () => {
+  if (!hasMore || loading) return;
+  const nextPage = page + 1;
+  setPage(nextPage);
+  fetchProducts(nextPage);
+  console.log('ss');
+};
+  
+
+const Loader = () => {
+  return (
+    <div className="flex justify-center items-center h-full w-full py-8">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-gray-900"></div>
+        <p className="mt-4 text-gray-700 text-sm">Loading products...</p>
+      </div>
+    </div>
+  );
+
+}
   // Calculate distances for products
   const productsWithDistance = products.map(product => {
     if (userLocation) {
@@ -167,7 +223,7 @@ export function ProductCatalog() {
     console.log("📍 User location cleared");
   };
 
-  const filteredProducts = productsWithDistance
+  const filteredProducts = products_api
     .filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -186,8 +242,9 @@ export function ProductCatalog() {
       return 0;
     });
 
-  const categories = ['Eco-Friendly', 'Handmade', 'Customizable'];
-  const hasActiveFilters = searchQuery !== '' || selectedCategory !== 'all' || acceptsOffers || brandFilter !== 'all' || upcFilter !== '';
+  const categories = Array.from(new Set(products_api.map(p => p.category))).filter(Boolean);
+  const hasActiveFilters = selectedCategory !== 'all' || acceptsOffers || brandFilter !== 'all' || upcFilter !== '';
+
 
   return (
     <div className="min-h-screen bg-gray-50">

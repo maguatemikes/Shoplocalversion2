@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Star, ShoppingCart, Heart, Share2, Package, Shield, ArrowLeft, Truck, CheckCircle, FileText, Award, MapPin, Navigation } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -7,21 +7,213 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
 import { products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-
+import { getProductDetail,getNearbyVendors, getShortProductDetail  } from '../api/woo/products';
+import AddToCartModal from "../components/AddtoCartModal";
 interface ProductDetailProps {
   productSlug: string;
 }
 
 export function ProductDetail({ productSlug }: ProductDetailProps) {
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const product = products.find(p => p.id === productSlug) || products[0];
+  const [product_item,setProducItem] = useState({
+    "acceptsOffers": false,
+    "brand": "",
+    "category": "Uncategorized",
+    "colors": [
+        ""
+    ],
+    "description": "this is a testing product\r\n\r\nthis is a testing product",
+    "id": "10236",
+    "image": "https://shoplocal.kinsta.cloud/wp-content/uploads/2025/11/cropped-pi4805000_ff_4805191-7b50b9ecf03784511cf9_full.jpg",
+    "isNew": false,
+    "isTrending": false,
+    "name": "Men's Nike Black Lebron 20 Low Top Shoe",
+    "originalPrice": 100,
+    "price": 89,
+    "rating": 5,
+    "reviewCount": 1,
+    "slug": "mens-nike-black-lebron-20-low-top-shoe",
+    "stock": 6,
+    "tags": [],
+    "upc": "123123",
+    "vendor": "Jhimson Store",
+    "vendorSlug": null
+});
+  const [vendors, setVendors] = useState([]);
+  const [coords, setCoords] = useState(null);
+  const [product,setProduct] = useState( {
+    id: '1',
+    name: 'Organic Cotton T-Shirt',
+    slug: 'organic-cotton-tshirt',
+    price: 18.50,
+    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
+    vendor: 'Green Threads Co.',
+    vendorSlug: 'green-threads-co',
+    category: 'Eco-Friendly',
+    description: '100% organic cotton t-shirt. Perfect for custom printing and embroidery.',
+    tags: ['apparel', 'organic', 'customizable'],
+    acceptsOffers: true,
+    isNew: true,
+    isTrending: true,
+    rating: 4.8,
+    reviewCount: 234,
+    stock: 150,
+    originalPrice: 24.99,
+    colors: ['#000000', '#FFFFFF', '#0EA5E9', '#10B981', '#F59E0B']
+  })
+ 
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [xtraData, setXtraData] = useState({});
+  const [loading,setLoading] = useState(false);
+  const [error,setError] = useState(false);
 
-  const images = [product.image, product.image, product.image]; // Mock multiple images
+const [showModal, setShowModal] = useState(false);
+const [lastAddedProduct, setLastAddedProduct] = useState({
+name: "",
+image: "",
+});
+
+
+// 1️⃣ Fetch product detail on product ID change
+useEffect(() => {
+  let isMounted = true;
+
+  const fetchProductDetail = async () => {
+    if (!product_item?.id) return;
+
+    try {
+      const moreDetail = await getProductDetail(slug);
+      if (isMounted) setXtraData(moreDetail);
+    } catch (err) {
+      console.error("Failed to fetch product details:", err);
+    }
+  };
+
+    const fetchShortProductDetail = async () => {
+    if (!slug) return;
+
+    try {
+      const shortDetail = await getShortProductDetail(slug);
+      if (isMounted) setProducItem(shortDetail),setProduct(shortDetail)
+    } catch (err) {
+      console.error("Failed to fetch product details:", err);
+    }
+  };
+  fetchShortProductDetail();
+  fetchProductDetail();
+
+
+  return () => {
+    isMounted = false;
+  };
+}, [product_item?.id]);
+
+// 2️⃣ Get user location once
+useEffect(() => {
+  if (!navigator.geolocation) {
+    setError("Geolocation not supported");
+    setLoading(false);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      setCoords({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
+    },
+    (err) => {
+      setError("Unable to retrieve your location");
+      setLoading(false);
+    }
+  );
+}, []);
+
+// 3️⃣ Fetch nearby vendors when coords is available
+useEffect(() => {
+  if (!coords) return;
+
+  const fetchVendors = async () => {
+    try {
+      setLoading(true);
+      const data = await getNearbyVendors(coords.lat, coords.lng, 100000);
+      setVendors(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchVendors();
+}, [coords]);
+
+
+  function timeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+
+  const intervals = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60,
+  };
+
+  for (const unit in intervals) {
+    const value = Math.floor(seconds / intervals[unit]);
+    if (value >= 1) {
+      return `${value} ${unit}${value > 1 ? "s" : ""} ago`;
+    }
+  }
+
+  return "Just now";
+}
+
+const handleAddToCart = () => {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+  // Check if product already exists
+  const existingIndex = cart.findIndex((item) => item.id === product.id);
+
+  if (existingIndex !== -1) {
+    // Update quantity
+    cart[existingIndex].quantity += 1;
+  } else {
+    // Add new product
+    cart.push({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      quantity: 1,
+    });
+  }
+
+  // Save back to localStorage
+  localStorage.setItem("cart", JSON.stringify(cart));
+
+  // Show popup modal
+  setLastAddedProduct({
+    name: product.name,
+    image: product.image,
+  });
+
+  setShowModal(true);
+
+  // Optional auto-close
+  setTimeout(() => setShowModal(false), 2000);
+};
+
 
   return (
-    <div className="min-h-screen bg-white">
+    <><div className="min-h-screen bg-white">
       {/* Breadcrumb */}
       <div className="border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -31,6 +223,8 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Products</span>
+
+
           </button>
         </div>
       </div>
@@ -40,35 +234,40 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Images */}
           <div>
+
             <div className="sticky top-24">
+
               {/* Main Image */}
               <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4">
                 <ImageWithFallback
-                  src={images[selectedImage]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                  src={Array.isArray(xtraData?.gallery_images) && xtraData.gallery_images.length > 0
+                    ? [xtraData.featured_img, ...xtraData.gallery_images][selectedImage] || xtraData.featured_img
+                    : xtraData.featured_img}
+                  alt={product_item?.name ?? 'Product'}
+                  className="w-full h-full object-cover" />
               </div>
 
               {/* Thumbnails */}
               <div className="grid grid-cols-4 gap-4">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`aspect-square rounded-xl overflow-hidden border-2 ${
-                      selectedImage === idx ? 'border-blue-600' : 'border-gray-200'
-                    }`}
-                  >
-                    <ImageWithFallback
-                      src={img}
-                      alt={`${product.name} ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+                {Array.isArray(xtraData?.gallery_images) ? (
+                  [xtraData.featured_img, ...xtraData.gallery_images].map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`aspect-square rounded-xl overflow-hidden border-2 ${selectedImage === idx ? 'border-blue-600' : 'border-gray-200'}`}
+                    >
+                      <ImageWithFallback
+                        src={img || ''}
+                        alt={`${product_item?.name ?? 'Product'} ${idx + 1}`}
+                        className="w-full h-full object-cover" />
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-gray-500 col-span-4 text-center">No images available</p>
+                )}
               </div>
             </div>
+
           </div>
 
           {/* Product Info */}
@@ -80,13 +279,13 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                 onClick={() => navigate(`/vendor/${product.vendorSlug}`)}
                 className="text-blue-600 hover:text-blue-700 hover:underline"
               >
-                {product.vendor}
+                {product_item.vendor}
               </button>
               <Badge variant="outline" className="ml-2">Verified Seller</Badge>
             </div>
 
             {/* Title */}
-            <h1 className="text-4xl text-gray-900 mb-4">{product.name}</h1>
+            <h1 className="text-4xl text-gray-900 mb-4">{product_item.name}</h1>
 
             {/* Rating */}
             <div className="flex items-center gap-4 mb-6">
@@ -94,32 +293,41 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-5 h-5 ${
-                      i < Math.floor(4.5)
+                    className={`w-5 h-5 ${i < Math.floor(xtraData.average_rating)
                         ? 'fill-amber-400 text-amber-400'
-                        : 'fill-none text-gray-300'
-                    }`}
-                  />
+                        : 'fill-none text-gray-300'}`} />
                 ))}
               </div>
-              <span className="text-gray-600">4.5 (127 reviews)</span>
+              <span className="text-gray-600 text-sm">
+                {xtraData.average_rating} ({product.xtraData} reviews)
+              </span>
             </div>
 
             {/* Price */}
             <div className="mb-8">
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-4xl text-gray-900">${product.price}</span>
-                <span className="text-xl text-gray-500 line-through">$89.99</span>
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Save 20%</Badge>
+                <span className="text-4xl text-gray-900">${product_item.price.toFixed(2)}</span>
+                {product_item.originalPrice && product_item.originalPrice > 0 && product_item.originalPrice > product_item.price && (
+                  <>
+                    <span className="text-xl text-gray-500 line-through">
+                      ${product_item.originalPrice.toFixed(2)}
+                    </span>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                      Save {Math.round(((product_item.originalPrice - product_item.price) / product_item.originalPrice) * 100)}%
+                    </Badge>
+                  </>
+                )}
               </div>
-              <p className="text-gray-600">Minimum order: 10 units</p>
+              {/* <p className="text-gray-600">Minimum order: 10 units</p> */}
             </div>
 
             {/* Stock Status */}
-            <div className="flex items-center gap-2 mb-8 text-green-600">
-              <CheckCircle className="w-5 h-5" />
-              <span>In Stock - Ready to Ship</span>
-            </div>
+            {product_item.stock > 0 ?
+              <div className="flex items-center gap-2 mb-8 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <span>In Stock - Ready to Ship</span>
+              </div> : null}
+
 
             {/* Quantity */}
             <div className="mb-8">
@@ -136,8 +344,7 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-center border-x-2 border-gray-200 py-3"
-                  />
+                    className="w-20 text-center border-x-2 border-gray-200 py-3" />
                   <button
                     onClick={() => setQuantity(quantity + 1)}
                     className="px-4 py-3 hover:bg-gray-50 transition-colors"
@@ -145,7 +352,7 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                     +
                   </button>
                 </div>
-                <span className="text-gray-600">Available: 1,250 units</span>
+                <span className="text-gray-600">Available: {product_item.stock} units</span>
               </div>
             </div>
 
@@ -154,6 +361,7 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
               <Button
                 size="lg"
                 className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl"
+                onClick={handleAddToCart}
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Add to Cart
@@ -246,30 +454,36 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                 <AccordionTrigger className="text-gray-900 hover:text-gray-900">
                   <div className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-blue-600" />
-                    <span>Customer Reviews (127)</span>
+                    <span>Customer Reviews ({xtraData.review_count})</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-6 pt-2">
-                    {[1, 2, 3].map((review) => (
-                      <div key={review} className="border-b border-gray-200 pb-4 last:border-0">
+                    {xtraData.reviews?.map((review) => (
+                      <div key={review.id} className="border-b border-gray-200 pb-4 last:border-0">
                         <div className="flex items-center gap-2 mb-2">
+
+                          {/* ⭐ Dynamic Star Rating */}
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className="w-4 h-4 fill-amber-400 text-amber-400"
-                              />
+                                className={`w-4 h-4 ${i < review.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
                             ))}
                           </div>
-                          <span className="text-gray-900">Jane Smith</span>
-                          <span className="text-gray-500">• 2 weeks ago</span>
+
+                          {/* Name */}
+                          <span className="text-gray-900">{review.author}</span>
+
+                          {/* Time Ago */}
+                          <span className="text-gray-500">• {timeAgo(review.date)}</span>
                         </div>
-                        <p className="text-gray-600 text-sm">
-                          Excellent product! The quality exceeded my expectations and my customers love it. Fast shipping and great communication from the seller.
-                        </p>
+
+                        {/* Review Content */}
+                        <p className="text-gray-600 text-sm">{review.content}</p>
                       </div>
                     ))}
+
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -315,51 +529,44 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
 
             <TabsContent value="description" className="py-8">
               <div className="prose max-w-none">
-                <p className="text-gray-600 mb-4">
-                  {product.description || 'This is a high-quality product from a verified independent seller. Perfect for retailers looking to expand their inventory with unique items.'}
-                </p>
-                <h3 className="text-xl text-gray-900 mb-3">Key Features:</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>Premium quality materials</li>
-                  <li>Sustainable and eco-friendly production</li>
-                  <li>Unique design not found in big-box stores</li>
-                  <li>Supports independent creators</li>
-                </ul>
+                {xtraData.description || 'No Description'}
               </div>
             </TabsContent>
 
             <TabsContent value="specifications" className="py-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left column */}
                 <div className="space-y-3">
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">Category:</span>
-                    <span className="text-gray-900">{product.category}</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">SKU:</span>
-                    <span className="text-gray-900">PROD-{product.id}</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">Weight:</span>
-                    <span className="text-gray-900">2.5 lbs</span>
-                  </div>
+                  {[
+                    { label: "Category", value: product_item.category || "Uncategorized" },
+                    { label: "Brand", value: product_item.brand || "Unknown Brand" },
+                    { label: "SKU/UPC", value: product_item.upc || "N/A" },
+                    { label: "Stock", value: product_item.stock ?? "N/A" },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex justify-between py-3 border-b border-gray-200">
+                      <span className="text-gray-600">{item.label}:</span>
+                      <span className="text-gray-900">{item.value}</span>
+                    </div>
+                  ))}
                 </div>
+
+                {/* Right column */}
                 <div className="space-y-3">
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">Dimensions:</span>
-                    <span className="text-gray-900">12" x 8" x 4"</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">Material:</span>
-                    <span className="text-gray-900">Organic Cotton</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="text-gray-600">Made In:</span>
-                    <span className="text-gray-900">USA</span>
-                  </div>
+                  {[
+                    { label: "Vendor", value: product_item.vendor || "Default Vendor" },
+                    { label: "Price", value: `$${product_item.price}` },
+                    { label: "Original Price", value: product_item.originalPrice ? `$${product_item.originalPrice}` : "-" },
+                    { label: "Accepts Offers", value: product_item.acceptsOffers ? "Yes" : "No" },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex justify-between py-3 border-b border-gray-200">
+                      <span className="text-gray-600">{item.label}:</span>
+                      <span className="text-gray-900">{item.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </TabsContent>
+
 
             <TabsContent value="warranty" className="py-8">
               <div className="space-y-6">
@@ -460,70 +667,70 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
 
                 <h3 className="text-xl text-gray-900 mb-4">Nearby Authorized Retailers</h3>
                 <div className="space-y-4">
-                  {[
-                    {
-                      name: 'Fleet Feet Sports',
-                      distance: '0.8 miles',
-                      address: '123 Main Street, Boston, MA',
-                      phone: '(617) 555-0123',
-                      hours: 'Open • Closes 9 PM'
-                    },
-                    {
-                      name: 'Marathon Sports',
-                      distance: '1.2 miles',
-                      address: '456 Boylston Street, Boston, MA',
-                      phone: '(617) 555-0456',
-                      hours: 'Open • Closes 8 PM'
-                    },
-                    {
-                      name: 'City Sports',
-                      distance: '2.1 miles',
-                      address: '789 Commonwealth Ave, Boston, MA',
-                      phone: '(617) 555-0789',
-                      hours: 'Open • Closes 7 PM'
-                    }
-                  ].map((store, index) => (
-                    <div key={index} className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-sky-500 transition-colors">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="text-lg text-gray-900">{store.name}</h4>
-                            <Badge className="bg-green-100 text-green-800 border-green-300">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Authorized
-                            </Badge>
+                  {vendors.map((store, index) => {
+                    const addressObj = store.address || {};
+                    const address = `${addressObj.street_1 || ''}${addressObj.street_2 ? ', ' + addressObj.street_2 : ''}, ${addressObj.city || ''}${addressObj.state ? ', ' + addressObj.state : ''}${addressObj.zip ? ', ' + addressObj.zip : ''}${addressObj.country ? ', ' + addressObj.country : ''}`;
+
+                    // Weekly opening hours
+                    const storeTime = store.store_nfi?.dokan_store_time || {};
+                    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                    const weeklyHours = weekdays.map(day => {
+                      const dayInfo = storeTime[day];
+                      if (!dayInfo || dayInfo.status !== 'open') return `${day.charAt(0).toUpperCase() + day.slice(1)}: Closed`;
+                      return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${dayInfo.opening_time.join(', ')} - ${dayInfo.closing_time.join(', ')}`;
+                    }).join(' | '); // you can change separator
+
+                    return (
+                      <div
+                        key={index}
+                        className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-sky-500 transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="text-lg text-gray-900">{store.store_name}</h4>
+                              <Badge className="bg-green-100 text-green-800 border-green-300">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                {store.status || 'Authorized'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                              <MapPin className="w-4 h-4" />
+                              <span>{address}</span>
+                            </div>
+                            <div className="text-sm text-gray-600">{store.phone}</div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{store.address}</span>
+                          <div className="text-right">
+                            <div className="text-sky-600 mb-1">{store.distance_miles.toFixed(1)} miles</div>
+                            <div className="text-sm text-gray-600 ">{weeklyHours}</div>
                           </div>
-                          <div className="text-sm text-gray-600">{store.phone}</div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sky-600 mb-1">{store.distance}</div>
-                          <div className="text-sm text-gray-600">{store.hours}</div>
+                        <div className="flex gap-3">
+                          <Button
+                            size="sm"
+                            className="bg-sky-600 hover:bg-sky-700 rounded-lg"
+                            onClick={() => navigate(`/vendor-detail/${store.store_name.toLowerCase().replace(/\s+/g, '-')}/`)}
+                          >
+                            View Store
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-lg"
+                            onClick={() => window.open(
+                              `https://www.google.com/maps/search/?api=1&query=${store.store_nfi.latitude},${store.store_nfi.longitude}`,
+                              "_blank"
+                            )}
+                          >
+                            <Navigation className="w-4 h-4 mr-2" />
+                            Get Directions
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        <Button
-                          size="sm"
-                          className="bg-sky-600 hover:bg-sky-700 rounded-lg"
-                          onClick={() => navigate('/vendor-detail/fleet-feet/')}
-                        >
-                          View Store
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-lg"
-                        >
-                          <Navigation className="w-4 h-4 mr-2" />
-                          Get Directions
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+
 
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mt-6">
                   <h4 className="text-gray-900 mb-3">Why Shop Locally?</h4>
@@ -554,8 +761,8 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
         {/* Related Products */}
         <div className="mt-20">
           <h2 className="text-3xl text-gray-900 mb-8">More from this Seller</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.slice(0, 4).map((relatedProduct) => (
+          <div className="grid grid-cols-4 gap-4">
+            {xtraData?.related_products?.slice(0, 4).map((relatedProduct) => (
               <button
                 key={relatedProduct.id}
                 onClick={() => navigate(`/product/${relatedProduct.id}`)}
@@ -565,16 +772,24 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
                   <ImageWithFallback
                     src={relatedProduct.image}
                     alt={relatedProduct.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                 </div>
-                <h3 className="text-gray-900 mb-1 group-hover:text-blue-600">{relatedProduct.name}</h3>
+                <h3 className="text-gray-900 mb-1 group-hover:text-blue-600">
+                  {relatedProduct.name}
+                </h3>
                 <p className="text-gray-600">${relatedProduct.price}</p>
               </button>
             ))}
           </div>
         </div>
+
       </div>
-    </div>
+
+    </div><AddToCartModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        productName={lastAddedProduct.name}
+        productImage={lastAddedProduct.image} /></>
+    
   );
 }
