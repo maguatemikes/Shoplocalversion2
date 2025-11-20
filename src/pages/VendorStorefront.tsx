@@ -64,7 +64,6 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
         );
 
         if (!response.ok) {
-          console.warn(`⚠️ API returned ${response.status}, falling back to mock vendor`);
           // Create a fallback vendor instead of showing error
           const fallbackVendor: Vendor = {
             id: 'fallback-' + vendorSlug,
@@ -91,7 +90,6 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
         const places = await response.json();
 
         if (!places || places.length === 0) {
-          console.warn('⚠️ No vendor found in API, using fallback');
           // Create fallback vendor
           const fallbackVendor: Vendor = {
             id: 'fallback-' + vendorSlug,
@@ -148,7 +146,6 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
         setVendor(apiVendor);
         setIsLoading(false);
       } catch (err) {
-        console.error('❌ Error fetching vendor from API:', err);
         // Instead of showing error, create a fallback vendor
         const fallbackVendor: Vendor = {
           id: 'fallback-' + vendorSlug,
