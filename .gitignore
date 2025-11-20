@@ -9,7 +9,7 @@ yarn-error.log*
 node_modules/
 
 # Vite build output
-dist/
+build/
 
 # Local env files
 .env
