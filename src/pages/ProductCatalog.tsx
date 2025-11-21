@@ -15,6 +15,7 @@ import {
 import { Button } from '../components/ui/button';
 import { calculateDistance } from '../lib/distance';
 import { getProducts } from '../api/woo/products';
+import Loading from '../components/Loading';
 interface UserLocation {
   lat: number;
   lon: number;
@@ -244,6 +245,7 @@ const Loader = () => {
 
   const categories = Array.from(new Set(products_api.map(p => p.category))).filter(Boolean);
   const hasActiveFilters = selectedCategory !== 'all' || acceptsOffers || brandFilter !== 'all' || upcFilter !== '';
+  
 
 
   return (

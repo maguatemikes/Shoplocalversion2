@@ -1,196 +1,78 @@
 import { Star, MapPin, Globe, Instagram, Mail, ArrowLeft, Heart, Share2, Search, Filter, Package, Users, Clock, Shield, TrendingUp, SlidersHorizontal, Award, Phone, MessageCircle, Grid3x3, List, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { ProductCard } from '../components/ProductCard';
-import { vendors, products, Vendor } from '../lib/mockData';
+import { vendors, products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { useState, useEffect } from 'react';
-import { config } from '../lib/config';
+import { useState,useEffect } from 'react';
+import { getVendorDetail, getVendorDetailAndRecordVisit } from '../api/dokan/vendors';
+import Loading from '../components/Loading';
 
 interface VendorStorefrontProps {
   vendorSlug: string;
-  vendor?: Vendor;
 }
 
-export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStorefrontProps) {
+export function VendorStorefront({ vendorSlug }: VendorStorefrontProps) {
   const navigate = useNavigate();
-  
-  // State for dynamic vendor loading
-  const [vendor, setVendor] = useState<Vendor | null>(vendorProp || null);
-  const [isLoading, setIsLoading] = useState(!vendorProp);
-  const [error, setError] = useState<string | null>(null);
-  
-  const vendorProducts = products.filter(p => p.vendorSlug === vendorSlug);
-  
+ 
+  const [vendorProducts,setVendorProducts] = useState([]);
+   const [vendor,setVendor] =useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('default');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [loading,setLoading] =useState(0);
+  const { slug } = useParams();
 
-  // Fetch vendor from API if not provided as prop
+
+
   useEffect(() => {
-    const fetchVendor = async () => {
-      // If vendor is provided as prop, use it
-      if (vendorProp) {
-        setVendor(vendorProp);
-        setIsLoading(false);
-        return;
-      }
+    let isMounted = true;
+  
+    const fetchShortProductDetail = async () => {
+    if (!slug) return;
 
-      // Try to find in mockData first
-      const mockVendor = vendors.find(v => v.slug === vendorSlug);
-      if (mockVendor) {
-        setVendor(mockVendor);
-        setIsLoading(false);
-        return;
-      }
+    try {
+    
+      const vendorDetail = await getVendorDetail(slug);
+      if (isMounted) setVendor(vendorDetail),setVendorProducts(vendorDetail.products),setLoading(1);
+       
+        // 2️⃣ Check localStorage to avoid counting multiple visits
+        const visitedVendors = JSON.parse(localStorage.getItem("visitedVendors") || "[]");
 
-      // If not in mockData, try to fetch from API
-      setIsLoading(true);
-      setError(null);
+        if (!visitedVendors.includes(vendorDetail.id)) {
+          await getVendorDetailAndRecordVisit(vendorDetail.id);
 
-      try {
-        console.log('🔍 Attempting to fetch vendor from API with slug:', vendorSlug);
+          // Add this vendor to localStorage
+          visitedVendors.push(vendorDetail.id);
+          localStorage.setItem("visitedVendors", JSON.stringify(visitedVendors));
+        }
         
-        const response = await fetch(
-          `${config.api.geodir}/places?slug=${vendorSlug}&per_page=1`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            }
-          }
-        );
-
-        if (!response.ok) {
-          // Create a fallback vendor instead of showing error
-          const fallbackVendor: Vendor = {
-            id: 'fallback-' + vendorSlug,
-            name: vendorSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-            slug: vendorSlug,
-            logo: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=200&h=200&fit=crop',
-            banner: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1200&h=400&fit=crop',
-            tagline: 'Premium Local Retailer',
-            bio: 'Welcome to our store! We are committed to providing quality products and exceptional service to our community.',
-            specialty: 'General',
-            rating: 4.5,
-            location: 'Local Store',
-            verified: false,
-            isLocalSeller: true,
-            image: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=400&h=400&fit=crop',
-            reviewCount: 0,
-            socialLinks: {}
-          };
-          setVendor(fallbackVendor);
-          setIsLoading(false);
-          return;
-        }
-
-        const places = await response.json();
-
-        if (!places || places.length === 0) {
-          // Create fallback vendor
-          const fallbackVendor: Vendor = {
-            id: 'fallback-' + vendorSlug,
-            name: vendorSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-            slug: vendorSlug,
-            logo: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=200&h=200&fit=crop',
-            banner: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1200&h=400&fit=crop',
-            tagline: 'Premium Local Retailer',
-            bio: 'Welcome to our store! We are committed to providing quality products and exceptional service to our community.',
-            specialty: 'General',
-            rating: 4.5,
-            location: 'Local Store',
-            verified: false,
-            isLocalSeller: true,
-            image: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=400&h=400&fit=crop',
-            reviewCount: 0,
-            socialLinks: {}
-          };
-          setVendor(fallbackVendor);
-          setIsLoading(false);
-          return;
-        }
-
-        const place = places[0];
-
-        // Convert API response to Vendor format
-        const apiVendor: Vendor = {
-          id: place.id.toString(),
-          name: typeof place.title === 'string' ? place.title : place.title?.rendered || 'Unknown Vendor',
-          slug: place.slug || vendorSlug,
-          logo: place.featured_image?.thumbnail || place.featured_image?.medium || 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=200&h=200&fit=crop',
-          banner: place.featured_image?.large || place.featured_image?.full || 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1200&h=400&fit=crop',
-          tagline: place.tagline || 'Premium Local Retailer',
-          bio: typeof place.content === 'string' ? place.content : place.content?.rendered || place.excerpt?.rendered || 'No description available',
-          specialty: place.default_category || 'General',
-          categoryId: place.default_category_id,
-          location: place.street || place.city || place.region || 'Location not specified',
-          rating: place.rating || 4.5,
-          reviewCount: place.review_count || 0,
-          verified: place.featured || false,
-          image: place.featured_image?.medium_large || place.featured_image?.full || 'https://images.unsplash.com/photo-1556740749-887f6717d7e4',
-          latitude: place.latitude ? parseFloat(place.latitude) : undefined,
-          longitude: place.longitude ? parseFloat(place.longitude) : undefined,
-          isLocalSeller: true,
-          socialLinks: {
-            website: place.website || undefined,
-            instagram: place.instagram || undefined,
-            facebook: place.facebook || undefined,
-            twitter: place.twitter || undefined,
-          }
-        };
-
-        console.log('✅ Successfully loaded vendor from API:', apiVendor);
-        setVendor(apiVendor);
-        setIsLoading(false);
-      } catch (err) {
-        // Instead of showing error, create a fallback vendor
-        const fallbackVendor: Vendor = {
-          id: 'fallback-' + vendorSlug,
-          name: vendorSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-          slug: vendorSlug,
-          logo: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=200&h=200&fit=crop',
-          banner: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1200&h=400&fit=crop',
-          tagline: 'Premium Local Retailer',
-          bio: 'Welcome to our store! We are committed to providing quality products and exceptional service to our community.',
-          specialty: 'General',
-          rating: 4.5,
-          location: 'Local Store',
-          verified: false,
-          isLocalSeller: true,
-          image: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=400&h=400&fit=crop',
-          reviewCount: 0,
-          socialLinks: {}
-        };
-        setVendor(fallbackVendor);
-        setIsLoading(false);
-      }
+    } catch (err) {
+      console.error("Failed to fetch product details:", err);
+    }
+  };
+  
+  fetchShortProductDetail();
+  
+    return () => {
+      isMounted = false;
     };
+  }, []);
 
-    fetchVendor();
-  }, [vendorSlug, vendorProp]);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading vendor...</p>
-        </div>
-      </div>
-    );
+    if (!loading) {
+      return <Loading message="Getting Info..." />;
+   
   }
 
-  // Error or not found state
-  if (error || !vendor) {
+  if (!vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-black mb-4">{error || 'Vendor not found'}</h2>
-          <p className="text-gray-600 mb-6">The vendor you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-black mb-4">Vendor not found</h2>
           <Button onClick={() => navigate('/vendors/')}>
             Back to Vendors
           </Button>
@@ -211,7 +93,7 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
   const categories = ['all', ...new Set(vendorProducts.map(p => p.category))];
 
   // Filter and sort products
-  const filteredProducts = vendorProducts
+  const filteredProducts =vendorProducts
     .filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
@@ -224,6 +106,7 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
       return 0;
     });
 
+    
   return (
     <div className="min-h-screen bg-white">
       {/* Compact Header with Breadcrumb */}
@@ -327,7 +210,7 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{storeStats.followers.toLocaleString()} Followers</span>
+                    <span className="text-gray-600">{vendor.visits} Visits</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-gray-400" />
@@ -583,37 +466,37 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
                     </div>
                   </div>
                   <div className="p-6">
-                    <p className="text-gray-700 leading-relaxed">{vendor.policies?.shipping || 'Please contact us for shipping details and rates.'}</p>
+                    <p className="text-gray-700 leading-relaxed">{vendor.policies.shipping}</p>
                   </div>
                 </div>
                 
                 {/* Returns */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="border-b border-gray-200 bg-gray-50 p-6">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center">
-                        <Package className="w-6 h-6 text-sky-600" />
+                      <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-white" />
                       </div>
-                      <h3 className="text-lg text-gray-900">Returns Policy</h3>
+                      <h3 className="text-lg text-gray-900">Return Policy</h3>
                     </div>
                   </div>
                   <div className="p-6">
-                    <p className="text-gray-700 leading-relaxed">{vendor.policies?.returns || 'Returns accepted within 30 days. Please contact us for more information.'}</p>
+                    <p className="text-gray-700 leading-relaxed">{vendor.policies.returns}</p>
                   </div>
                 </div>
                 
                 {/* FAQs */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="border-b border-gray-200 bg-gray-50 p-6">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center">
-                        <MessageCircle className="w-6 h-6 text-sky-600" />
+                      <div className="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center">
+                        <MessageCircle className="w-5 h-5 text-white" />
                       </div>
                       <h3 className="text-lg text-gray-900">FAQs</h3>
                     </div>
                   </div>
                   <div className="p-6">
-                    <p className="text-gray-700 leading-relaxed">{vendor.policies?.faqs || 'For any questions, please reach out to us directly.'}</p>
+                    <p className="text-gray-700 leading-relaxed">{vendor.policies.faqs}</p>
                   </div>
                 </div>
               </div>
@@ -629,3 +512,5 @@ export function VendorStorefront({ vendorSlug, vendor: vendorProp }: VendorStore
 }
 
 export default VendorStorefront;
+
+

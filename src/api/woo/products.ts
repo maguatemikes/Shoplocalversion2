@@ -41,7 +41,7 @@ export const getProductDetail = async (slug) => {
 
 export const getShortProductDetail = async (slug) => {
   try {
-    const response = await axios.get(`${BASE_URL}/product-short/${slug}?gggg`, {
+    const response = await axios.get(`${BASE_URL}/product-short/${slug}?lll`, {
       headers: { "Content-Type": "application/json" },
       maxBodyLength: Infinity,
     });

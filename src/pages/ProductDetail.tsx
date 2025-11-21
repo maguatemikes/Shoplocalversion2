@@ -184,7 +184,7 @@ const handleAddToCart = () => {
 
   if (existingIndex !== -1) {
     // Update quantity
-    cart[existingIndex].quantity += 1;
+    cart[existingIndex].quantity += quantity;
   } else {
     // Add new product
     cart.push({
@@ -192,7 +192,7 @@ const handleAddToCart = () => {
       name: product.name,
       image: product.image,
       price: product.price,
-      quantity: 1,
+      quantity: quantity,
     });
   }
 

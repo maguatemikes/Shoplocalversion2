@@ -62,9 +62,10 @@ useEffect(() => {
 }, [open]);
 
 useEffect(() => {
-  localStorage.setItem("cart", JSON.stringify(cartItems));
-}, [cartItems]);
-
+  if (open) {
+    localStorage.setItem("cart", JSON.stringify(cartItems));
+  }
+}, [cartItems, open]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
