@@ -95,27 +95,42 @@ interface Place {
       media_details?: any;
     }>;
   };
+  // Custom ACF fields
+  acf?: {
+    rating?: number;
+    custom_rating?: number;
+    [key: string]: any;
+  };
+  // Direct custom fields (common field names)
+  gd_custom_rating?: number; // Custom API rating field (PRIORITY)
+  gd_custom_ratings?: number;
+  custom_rating?: number;
+  gd_rating?: number;
+  overall_rating?: number;
+  review_rating?: number;
+  [key: string]: any; // Allow any other custom fields
 }
 
 // Helper function to convert API Place to Vendor
-function placeToVendor(place: Place, userLocation?: { lat: number; lon: number } | null): Vendor {
+function placeToVendor(
+  place: Place,
+  userLocation?: { lat: number; lon: number } | null
+): Vendor {
   // Handle category - post_category from API
   let specialty = "General";
   let categoryId: number | undefined;
-  
+
   // Extract category ID and name
   if (place.default_category) {
     categoryId = place.default_category;
   }
-  
+
   if (place.post_category) {
     // post_category can be a string, object, or array
     if (typeof place.post_category === "string") {
       specialty = place.post_category;
     } else if (Array.isArray(place.post_category)) {
-      specialty = place.post_category
-        .map((cat) => cat.name)
-        .join(", ");
+      specialty = place.post_category.map((cat) => cat.name).join(", ");
       // Use the first category ID if available
       if (!categoryId && place.post_category.length > 0) {
         categoryId = place.post_category[0].id;
@@ -135,24 +150,18 @@ function placeToVendor(place: Place, userLocation?: { lat: number; lon: number }
   };
 
   // Get image - use featured_image or images array from API
-  const imageUrl =
-    place.featured_image?.src || place.images?.[0]?.src || "";
+  const imageUrl = place.featured_image?.src || place.images?.[0]?.src || "";
   const logo = imageUrl || "https://via.placeholder.com/150";
-  const banner =
-    imageUrl || "https://via.placeholder.com/800x300";
+  const banner = imageUrl || "https://via.placeholder.com/800x300";
 
   // Create tagline from content (first 100 chars)
   const content = stripHtml(
-    typeof place.content === "string"
-      ? place.content
-      : place.content?.rendered,
+    typeof place.content === "string" ? place.content : place.content?.rendered
   );
-  const tagline =
-    content.substring(0, 100) || "Quality local business";
+  const tagline = content.substring(0, 100) || "Quality local business";
 
   // Full bio from content
-  const bio =
-    content || "A trusted local business in your community.";
+  const bio = content || "A trusted local business in your community.";
 
   // Extract title string
   const titleString =
@@ -171,6 +180,19 @@ function placeToVendor(place: Place, userLocation?: { lat: number; lon: number }
     );
   }
 
+  // Extract custom rating from custom API (gd_custom_ratings field)
+  const customRating =
+    place.gd_custom_ratings || // Custom API rating field (PRIORITY - plural!)
+    place.gd_custom_rating ||
+    place.acf?.rating ||
+    place.acf?.custom_rating ||
+    place.custom_rating ||
+    place.gd_rating ||
+    place.overall_rating ||
+    place.review_rating ||
+    place.rating ||
+    4.5;
+
   return {
     id: place.id.toString(),
     name: titleString,
@@ -186,7 +208,10 @@ function placeToVendor(place: Place, userLocation?: { lat: number; lon: number }
     bio: bio,
     specialty: specialty,
     categoryId: categoryId,
-    rating: place.rating || 4.5,
+    rating:
+      typeof customRating === "number"
+        ? customRating
+        : parseFloat(String(customRating)) || 0,
     location:
       place.city && place.region
         ? `${place.city}, ${place.region}`
@@ -214,7 +239,10 @@ export default function VendorsDirectory() {
 
   // Cache configuration
   const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
-  const CACHE_KEY = "vendorsDirectory_cache";
+  const CACHE_KEY = "vendorsDirectory_cache_v14"; // v14 = Removed console logs
+
+  // DEBUG: Verify new code is loading
+  console.log("🔄 VendorsDirectory v3 LOADED - New code active!");
 
   // State management
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -252,18 +280,14 @@ export default function VendorsDirectory() {
   const [regionFilter, setRegionFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [ratingFilter, setRatingFilter] = useState<number[]>([
-    0,
-  ]);
+  const [ratingFilter, setRatingFilter] = useState<number[]>([0]);
   const [openNow, setOpenNow] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("featured");
   const [showMap, setShowMap] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState<
-    string | null
-  >(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
 
   // User location state
   const [userLocation, setUserLocation] = useState<{
@@ -286,14 +310,13 @@ export default function VendorsDirectory() {
 
       // Check if cache is still valid
       if (now - timestamp > CACHE_DURATION) {
-        console.log("🗑️ Cache expired, clearing...");
         localStorage.removeItem(CACHE_KEY);
         return null;
       }
 
       console.log(
         "✅ Using cached data from",
-        new Date(timestamp).toLocaleTimeString(),
+        new Date(timestamp).toLocaleTimeString()
       );
       return { data, filters };
     } catch (err) {
@@ -309,11 +332,7 @@ export default function VendorsDirectory() {
         filters,
         timestamp: Date.now(),
       };
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify(cacheObject),
-      );
-      console.log("💾 Data cached successfully");
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheObject));
     } catch (err) {
       console.error("Error setting cache:", err);
       // If localStorage is full, clear old cache
@@ -323,41 +342,36 @@ export default function VendorsDirectory() {
 
   const clearCache = () => {
     localStorage.removeItem(CACHE_KEY);
-    console.log("🗑️ Cache cleared");
   };
 
   // Save scroll position when navigating away
   const saveScrollPosition = () => {
     sessionStorage.setItem(
       "vendorsDirectory_scrollPosition",
-      window.scrollY.toString(),
+      window.scrollY.toString()
     );
     sessionStorage.setItem(
       "vendorsDirectory_currentPage",
-      currentPage.toString(),
+      currentPage.toString()
     );
-    console.log("💾 Saved scroll position:", window.scrollY);
   };
 
   // Helper function to apply filters and pagination
-  const applyFiltersAndPagination = (
-    places: Place[],
-    page: number,
-  ) => {
+  const applyFiltersAndPagination = (places: Place[], page: number) => {
     // CLIENT-SIDE FILTERING (API doesn't support region/city filtering via params)
     let filteredPlaces = places;
 
     // Filter by region if selected
     if (regionFilter && regionFilter !== "all") {
       filteredPlaces = filteredPlaces.filter(
-        (place: Place) => place.region === regionFilter,
+        (place: Place) => place.region === regionFilter
       );
     }
 
     // Filter by city if selected
     if (cityFilter && cityFilter !== "all") {
       filteredPlaces = filteredPlaces.filter(
-        (place: Place) => place.city === cityFilter,
+        (place: Place) => place.city === cityFilter
       );
     }
 
@@ -365,14 +379,11 @@ export default function VendorsDirectory() {
     const itemsPerPage = 12;
     const startIndex = (page - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedPlaces = filteredPlaces.slice(
-      startIndex,
-      endIndex,
-    );
+    const paginatedPlaces = filteredPlaces.slice(startIndex, endIndex);
 
     // Map API places to Vendor format (with distance calculation)
     const mappedVendors = paginatedPlaces.map((place: Place) =>
-      placeToVendor(place, userLocation),
+      placeToVendor(place, userLocation)
     );
 
     // Store vendors for display
@@ -380,16 +391,11 @@ export default function VendorsDirectory() {
 
     // Update pagination info (based on filtered results)
     setTotalItems(filteredPlaces.length);
-    setTotalPages(
-      Math.ceil(filteredPlaces.length / itemsPerPage),
-    );
+    setTotalPages(Math.ceil(filteredPlaces.length / itemsPerPage));
   };
 
   // Fetch places from GeoDirectory API with pagination
-  const fetchPlaces = async (
-    page: number = 1,
-    useCache: boolean = true,
-  ) => {
+  const fetchPlaces = async (page: number = 1, useCache: boolean = true) => {
     setLoading(true);
     setError(null);
 
@@ -413,9 +419,7 @@ export default function VendorsDirectory() {
             cached.filters.city === currentFilters.city;
 
           if (filtersMatch) {
-            console.log(
-              "📦 Loading from cache - filters match!",
-            );
+            console.log("📦 Loading from cache - filters match!");
             setAllPlaces(cached.data);
 
             // Apply client-side filtering and pagination
@@ -423,9 +427,7 @@ export default function VendorsDirectory() {
             setLoading(false);
             return;
           } else {
-            console.log(
-              "🔄 Filters changed, fetching fresh data...",
-            );
+            console.log("🔄 Filters changed, fetching fresh data...");
           }
         }
       }
@@ -444,13 +446,10 @@ export default function VendorsDirectory() {
       // Add category filter if present
       if (categoryFilter && categoryFilter !== "all") {
         const selectedCategory = categories.find(
-          (cat) => cat.name === categoryFilter,
+          (cat) => cat.name === categoryFilter
         );
         if (selectedCategory) {
-          params.append(
-            "gd_placecategory",
-            selectedCategory.id.toString(),
-          );
+          params.append("gd_placecategory", selectedCategory.id.toString());
         }
       }
 
@@ -459,23 +458,60 @@ export default function VendorsDirectory() {
 
       const url = `https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places?${params.toString()}`;
 
-      console.log("🌐 Fetching from API...");
+      console.log(
+        "🌐 Fetching from GeoDirectory API + Custom API for ratings..."
+      );
+
+      // Fetch GeoDirectory data
       const response = await axios.get(url, {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
+      });
+
+      // Fetch ratings from Custom API (has proper ordering)
+      const ratingsResponse = await axios
+        .get("https://shoplocal.kinsta.cloud/wp-json/custom-api/v1/places", {
+          params: {
+            page: 1,
+            per_page: 100,
+          },
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        })
+        .catch(() => ({ data: { data: [] } })); // Graceful fallback
+
+      const ratingsData = ratingsResponse.data?.data || [];
+
+      // Merge ratings into places (keep GeoDirectory data, add Custom API ratings)
+      const placesWithRatings = response.data.map((place: any) => {
+        // Compare IDs as strings (Custom API returns string, GeoDirectory returns number)
+        const ratingData = ratingsData.find(
+          (r: any) => String(r.ID) === String(place.id)
+        );
+        if (ratingData && ratingData.gd_custom_ratings !== undefined) {
+          const rating = parseFloat(ratingData.gd_custom_ratings) || 0;
+          return {
+            ...place,
+            gd_custom_ratings: rating,
+          };
+        }
+        return place;
       });
 
       // Store all places
-      setAllPlaces(response.data);
+      setAllPlaces(placesWithRatings);
 
       // Cache the response
-      setCachedData(response.data, currentFilters);
+      setCachedData(placesWithRatings, currentFilters);
 
       // Apply client-side filtering and pagination
-      applyFiltersAndPagination(response.data, page);
+      applyFiltersAndPagination(placesWithRatings, page);
     } catch (err: any) {
       console.error("❌ Error fetching places:", err);
       console.error("❌ Error details:", {
@@ -490,7 +526,7 @@ export default function VendorsDirectory() {
         err.message ||
         "Failed to fetch businesses";
       setError(
-        `Network Error: ${errorMessage}. Please check your connection and try again.`,
+        `Network Error: ${errorMessage}. Please check your connection and try again.`
       );
       setVendors([]);
       setTotalItems(0);
@@ -504,7 +540,7 @@ export default function VendorsDirectory() {
   const fetchMapMarkers = async () => {
     try {
       const params = new URLSearchParams();
-      
+
       // Required: GeoDirectory post type
       params.append("post_type", "gd_place");
 
@@ -529,15 +565,11 @@ export default function VendorsDirectory() {
 
       // CLIENT-SIDE FILTERING for region/city
       if (regionFilter && regionFilter !== "all") {
-        data = data.filter(
-          (marker: any) => marker.region === regionFilter,
-        );
+        data = data.filter((marker: any) => marker.region === regionFilter);
       }
 
       if (cityFilter && cityFilter !== "all") {
-        data = data.filter(
-          (marker: any) => marker.city === cityFilter,
-        );
+        data = data.filter((marker: any) => marker.city === cityFilter);
       }
 
       setMapMarkers(data);
@@ -552,24 +584,22 @@ export default function VendorsDirectory() {
     try {
       const url =
         "https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places/categories?per_page=100&hide_empty=false";
-      const options = {
-        method: "GET",
+
+      const response = await axios.get(url, {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        mode: "cors" as RequestMode,
-      };
+        timeout: 10000,
+      });
 
-      const response = await fetch(url, options);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(
-          `HTTP error! status: ${response.status}`,
-        );
+      // Check if API returned array
+      if (!Array.isArray(data)) {
+        console.error("❌ Categories API returned non-array:", data);
+        throw new Error("Invalid API response format");
       }
-
-      const data = await response.json();
 
       // Extract category objects from the API response
       // The API returns an array of category objects with name, slug, id, icon, fa_icon, etc.
@@ -577,13 +607,15 @@ export default function VendorsDirectory() {
         .filter((cat: any) => cat.name && cat.name !== "")
         .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      console.log(
-        "📦 Categories with icons from API:",
-        categoriesArray,
-      );
+      console.log("📦 Categories with icons from API:", categoriesArray);
       setCategories(categoriesArray);
     } catch (err: any) {
       console.error("Error fetching categories:", err);
+      console.error("❌ Category error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
 
       // Set fallback categories
       setCategories([
@@ -606,22 +638,21 @@ export default function VendorsDirectory() {
       // Fetch places first to populate location pairs (region-city relationships)
       const placesUrl =
         "https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places?per_page=100";
-      const placesResponse = await fetch(placesUrl, {
-        method: "GET",
+      const placesResponse = await axios.get(placesUrl, {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        mode: "cors",
+        timeout: 10000,
       });
 
-      if (!placesResponse.ok) {
-        throw new Error(
-          `Failed to fetch places: ${placesResponse.status}`,
-        );
-      }
+      const placesData = placesResponse.data;
 
-      const placesData = await placesResponse.json();
+      // Check if API returned array
+      if (!Array.isArray(placesData)) {
+        console.error("❌ Places API returned non-array:", placesData);
+        throw new Error("Invalid API response format");
+      }
 
       // Store location pairs for city filtering
       const locationPairs = placesData
@@ -631,38 +662,38 @@ export default function VendorsDirectory() {
           city: place.city!,
         }));
 
+      console.log("📍 Location Pairs from Places:", locationPairs);
+      console.log("📍 Unique Regions in Places:", [
+        ...new Set(placesData.map((p: Place) => p.region).filter(Boolean)),
+      ]);
+
       setAllLocations(locationPairs);
 
       // Try taxonomy endpoint first for regions, fallback to extraction
       try {
         const regionsUrl =
           "https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places/regions";
-        const regionsResponse = await fetch(regionsUrl, {
-          method: "GET",
+        const regionsResponse = await axios.get(regionsUrl, {
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          mode: "cors",
+          timeout: 10000,
         });
 
-        if (regionsResponse.ok) {
-          const regionsData = await regionsResponse.json();
+        const regionsData = regionsResponse.data;
 
-          // Process regions as taxonomy objects - preserve ALL fields from API
-          const regionsArray = regionsData
-            .filter(
-              (region: any) =>
-                region.name && region.name !== "",
-            )
-            .sort((a: any, b: any) =>
-              a.name.localeCompare(b.name),
-            );
+        console.log("🌍 Regions API Response:", regionsData);
+        console.log("🌍 Total Regions Count:", regionsData.length);
+        console.log("🌍 First 5 Regions:", regionsData.slice(0, 5));
 
-          setRegions(regionsArray);
-        } else {
-          throw new Error("Regions endpoint not available");
-        }
+        // Process regions as taxonomy objects - preserve ALL fields from API
+        const regionsArray = regionsData
+          .filter((region: any) => region.name && region.name !== "")
+          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        console.log("🌍 Filtered Regions Array:", regionsArray);
+        setRegions(regionsArray);
       } catch (regionErr: any) {
         // Extract unique regions from places and create taxonomy objects
         const uniqueRegions = [
@@ -670,21 +701,16 @@ export default function VendorsDirectory() {
             placesData
               .map((place: Place) => place.region)
               .filter(
-                (region: string | undefined) =>
-                  region && region.trim() !== "",
-              ),
+                (region: string | undefined) => region && region.trim() !== ""
+              )
           ),
         ].sort();
 
-        const regionsArray = uniqueRegions.map(
-          (region, index) => ({
-            id: index + 1,
-            name: region as string,
-            slug: (region as string)
-              .toLowerCase()
-              .replace(/\s+/g, "-"),
-          }),
-        );
+        const regionsArray = uniqueRegions.map((region, index) => ({
+          id: index + 1,
+          name: region as string,
+          slug: (region as string).toLowerCase().replace(/\s+/g, "-"),
+        }));
 
         setRegions(regionsArray);
       }
@@ -693,62 +719,53 @@ export default function VendorsDirectory() {
       try {
         const citiesUrl =
           "https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places/cities";
-        const citiesResponse = await fetch(citiesUrl, {
-          method: "GET",
+        const citiesResponse = await axios.get(citiesUrl, {
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          mode: "cors",
+          timeout: 10000,
         });
 
-        if (citiesResponse.ok) {
-          const citiesData = await citiesResponse.json();
+        const citiesData = citiesResponse.data;
 
-          // Process cities as taxonomy objects - preserve ALL fields from API
-          const citiesArray = citiesData
-            .filter(
-              (city: any) => city.name && city.name !== "",
-            )
-            .sort((a: any, b: any) =>
-              a.name.localeCompare(b.name),
-            );
+        console.log("🏙️ Cities API Response:", citiesData);
+        console.log("🏙️ Total Cities Count:", citiesData.length);
+        console.log("🏙️ First 5 Cities:", citiesData.slice(0, 5));
 
-          setCities(citiesArray);
-        } else {
-          throw new Error("Cities endpoint not available");
-        }
+        // Process cities as taxonomy objects - preserve ALL fields from API
+        const citiesArray = citiesData
+          .filter((city: any) => city.name && city.name !== "")
+          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        console.log("🏙️ Filtered Cities Array:", citiesArray);
+
+        setCities(citiesArray);
       } catch (cityErr: any) {
         // Extract unique cities from places and create taxonomy objects
         const uniqueCities = [
           ...new Set(
             placesData
               .map((place: Place) => place.city)
-              .filter(
-                (city: string | undefined) =>
-                  city && city.trim() !== "",
-              ),
+              .filter((city: string | undefined) => city && city.trim() !== "")
           ),
         ].sort();
 
         const citiesArray = uniqueCities.map((city, index) => ({
           id: index + 1000, // Start at 1000 to avoid ID conflicts with regions
           name: city as string,
-          slug: (city as string)
-            .toLowerCase()
-            .replace(/\s+/g, "-"),
+          slug: (city as string).toLowerCase().replace(/\s+/g, "-"),
         }));
 
         setCities(citiesArray);
-        console.log(
-          "🌍 [CITIES FALLBACK] Extracted cities:",
-          citiesArray,
-        );
+        console.log("🌍 [CITIES FALLBACK] Extracted cities:", citiesArray);
       }
     } catch (err: any) {
       console.error("❌ Error fetching locations:", err);
       console.error("❌ Location error details:", {
         message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
         stack: err.stack,
       });
 
@@ -783,40 +800,43 @@ export default function VendorsDirectory() {
         setUserLocation(newLocation);
         setLocationLoading(false);
         setLocationError(null);
-        
+
         // Automatically sort by distance when location is detected
         setSortBy("distance");
-        
+
         // Re-apply filters with new distance calculations
         applyFiltersAndPagination(allPlaces, currentPage);
-        
+
         console.log("📍 User location detected:", newLocation);
       },
       (error) => {
         setLocationLoading(false);
         let errorMessage = "Unable to detect your location.";
-        
+
         if (error.code === 1) {
           // PERMISSION_DENIED
-          errorMessage = "Location access denied. This feature requires location permissions. Please enable location access in your browser settings, or try using HTTPS.";
+          errorMessage =
+            "Location access denied. This feature requires location permissions. Please enable location access in your browser settings, or try using HTTPS.";
         } else if (error.code === 2) {
           // POSITION_UNAVAILABLE
-          errorMessage = "Location unavailable. Please check your device's location services.";
+          errorMessage =
+            "Location unavailable. Please check your device's location services.";
         } else if (error.code === 3) {
           // TIMEOUT
           errorMessage = "Location request timed out. Please try again.";
         }
-        
+
         // Check for permissions policy error
         if (error.message && error.message.includes("permissions policy")) {
-          errorMessage = "Location access is blocked by your browser. This may happen when the site is embedded or not served over HTTPS. Try opening the site directly in a new tab.";
+          errorMessage =
+            "Location access is blocked by your browser. This may happen when the site is embedded or not served over HTTPS. Try opening the site directly in a new tab.";
         }
-        
+
         setLocationError(errorMessage);
-        
+
         // Show manual location option when geolocation fails
         setShowManualLocation(true);
-        
+
         console.warn("📍 Geolocation blocked - manual location option enabled");
       },
       {
@@ -841,31 +861,38 @@ export default function VendorsDirectory() {
       // Use Nominatim (OpenStreetMap) geocoding API - free and no API key needed
       const query = encodeURIComponent(manualZipCode.trim());
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=us&limit=1`;
-      
+
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'ShopLocal Marketplace Directory'
-        }
+          "User-Agent": "ShopLocal Marketplace Directory",
+        },
       });
-      
+
       const data = await response.json();
-      
+
       if (data && data.length > 0) {
         const newLocation = {
           lat: parseFloat(data[0].lat),
-          lon: parseFloat(data[0].lon)
+          lon: parseFloat(data[0].lon),
         };
-        
+
         setUserLocation(newLocation);
         setLocationLoading(false);
         setLocationError(null);
         setShowManualLocation(false);
         setSortBy("distance");
         applyFiltersAndPagination(allPlaces, currentPage);
-        
-        console.log("📍 Manual location set:", newLocation, "for:", manualZipCode);
+
+        console.log(
+          "📍 Manual location set:",
+          newLocation,
+          "for:",
+          manualZipCode
+        );
       } else {
-        setLocationError("Location not found. Please try a valid US zip code or city name.");
+        setLocationError(
+          "Location not found. Please try a valid US zip code or city name."
+        );
         setLocationLoading(false);
       }
     } catch (error) {
@@ -888,22 +915,31 @@ export default function VendorsDirectory() {
 
   // Fetch on component mount
   useEffect(() => {
+    // FORCE CLEAR OLD CACHE ON LOAD
+    localStorage.removeItem("vendorsDirectory_cache_v2");
+    localStorage.removeItem("vendorsDirectory_cache_v3");
+    localStorage.removeItem("vendorsDirectory_cache_v4");
+    localStorage.removeItem("vendorsDirectory_cache_v5");
+    localStorage.removeItem("vendorsDirectory_cache_v6");
+    localStorage.removeItem("vendorsDirectory_cache_v7");
+    localStorage.removeItem("vendorsDirectory_cache_v8");
+    localStorage.removeItem("vendorsDirectory_cache_v9");
+    localStorage.removeItem("vendorsDirectory_cache_v10");
+    localStorage.removeItem("vendorsDirectory_cache_v11");
+    localStorage.removeItem("vendorsDirectory_cache_v12");
+    localStorage.removeItem("vendorsDirectory_cache_v13");
+
     fetchCategories();
     fetchLocations();
 
     // Restore scroll position if coming back
     const savedScrollPosition = sessionStorage.getItem(
-      "vendorsDirectory_scrollPosition",
+      "vendorsDirectory_scrollPosition"
     );
-    const savedPage = sessionStorage.getItem(
-      "vendorsDirectory_currentPage",
-    );
+    const savedPage = sessionStorage.getItem("vendorsDirectory_currentPage");
 
     if (savedScrollPosition && savedPage) {
-      console.log(
-        "📜 Restoring scroll position:",
-        savedScrollPosition,
-      );
+      console.log("📜 Restoring scroll position:", savedScrollPosition);
       setCurrentPage(parseInt(savedPage));
       fetchPlaces(parseInt(savedPage), true); // Use cache
 
@@ -913,9 +949,7 @@ export default function VendorsDirectory() {
       }, 100);
 
       // Clear saved position after restoring
-      sessionStorage.removeItem(
-        "vendorsDirectory_scrollPosition",
-      );
+      sessionStorage.removeItem("vendorsDirectory_scrollPosition");
       sessionStorage.removeItem("vendorsDirectory_currentPage");
     } else {
       fetchPlaces(1, true); // Initial fetch with cache enabled
@@ -1024,34 +1058,22 @@ export default function VendorsDirectory() {
           ...new Set(
             allLocations
               .filter((loc) => loc.region === regionFilter)
-              .map((loc) => loc.city),
+              .map((loc) => loc.city)
           ),
         ].sort();
 
   console.log("🔍 [CITY FILTER DEBUG] ============");
-  console.log(
-    "🔍 [CITY FILTER] Selected region:",
-    regionFilter,
-  );
-  console.log(
-    "🔍 [CITY FILTER] Total location pairs:",
-    allLocations.length,
-  );
+  console.log("🔍 [CITY FILTER] Selected region:", regionFilter);
+  console.log("🔍 [CITY FILTER] Total location pairs:", allLocations.length);
   console.log(
     "🔍 [CITY FILTER] First 10 location pairs:",
-    allLocations.slice(0, 10),
+    allLocations.slice(0, 10)
   );
   console.log("🔍 [CITY FILTER] Unique regions in data:", [
     ...new Set(allLocations.map((loc) => loc.region)),
   ]);
-  console.log(
-    "🔍 [CITY FILTER] Available cities for region:",
-    availableCities,
-  );
-  console.log(
-    "🔍 [CITY FILTER] Total cities state:",
-    cities.length,
-  );
+  console.log("🔍 [CITY FILTER] Available cities for region:", availableCities);
+  console.log("🔍 [CITY FILTER] Total cities state:", cities.length);
   console.log("🔍 [CITY FILTER DEBUG] ============");
 
   return (
@@ -1064,8 +1086,7 @@ export default function VendorsDirectory() {
               Business Directory
             </h1>
             <p className="text-lg text-gray-600">
-              Discover trusted local businesses in your
-              community
+              Discover trusted local businesses in your community
             </p>
           </div>
         </div>
@@ -1076,25 +1097,27 @@ export default function VendorsDirectory() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Filters - Improved grouping and spacing */}
           <div
-            className={`mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${showMap ? "block" : "block lg:hidden"}`}
+            className={`mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${
+              showMap ? "block" : "block lg:hidden"
+            }`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center">
                   <FilterIcon className="w-5 h-5 text-sky-700" />
                 </div>
-                <h2 className="text-xl text-gray-950">
-                  Filter Businesses
-                </h2>
+                <h2 className="text-xl text-gray-950">Filter Businesses</h2>
               </div>
-              <Button
-                variant="outline"
-                onClick={clearAllFilters}
-                className="rounded-lg"
-                size="sm"
-              >
-                Clear Filters
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={clearAllFilters}
+                  className="rounded-lg"
+                  size="sm"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1102,29 +1125,21 @@ export default function VendorsDirectory() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-gray-600" />
-                  <label className="text-sm text-gray-900">
-                    Search
-                  </label>
+                  <label className="text-sm text-gray-900">Search</label>
                 </div>
                 <Input
                   type="text"
                   placeholder="Search businesses..."
                   value={searchQuery}
-                  onChange={(e) =>
-                    setSearchQuery(e.target.value)
-                  }
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && handleSearch()
-                  }
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="bg-gray-50 border-0 rounded-lg h-9"
                 />
               </div>
 
               {/* Category */}
               <div className="space-y-2">
-                <label className="text-sm text-gray-900">
-                  Category
-                </label>
+                <label className="text-sm text-gray-900">Category</label>
                 <Select
                   value={categoryFilter}
                   onValueChange={setCategoryFilter}
@@ -1133,9 +1148,7 @@ export default function VendorsDirectory() {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
-                    <SelectItem value="all">
-                      All Categories
-                    </SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.name}>
                         {cat.name}
@@ -1149,26 +1162,16 @@ export default function VendorsDirectory() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-gray-600" />
-                  <label className="text-sm text-gray-900">
-                    Region
-                  </label>
+                  <label className="text-sm text-gray-900">Region</label>
                 </div>
-                <Select
-                  value={regionFilter}
-                  onValueChange={setRegionFilter}
-                >
+                <Select value={regionFilter} onValueChange={setRegionFilter}>
                   <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
                     <SelectValue placeholder="All Regions" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
-                    <SelectItem value="all">
-                      All Regions
-                    </SelectItem>
+                    <SelectItem value="all">All Regions</SelectItem>
                     {regions.map((region) => (
-                      <SelectItem
-                        key={region.id}
-                        value={region.name}
-                      >
+                      <SelectItem key={region.id} value={region.name}>
                         {region.name}
                       </SelectItem>
                     ))}
@@ -1180,21 +1183,14 @@ export default function VendorsDirectory() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-gray-600" />
-                  <label className="text-sm text-gray-900">
-                    City
-                  </label>
+                  <label className="text-sm text-gray-900">City</label>
                 </div>
-                <Select
-                  value={cityFilter}
-                  onValueChange={setCityFilter}
-                >
+                <Select value={cityFilter} onValueChange={setCityFilter}>
                   <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
                     <SelectValue placeholder="All Cities" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
-                    <SelectItem value="all">
-                      All Cities
-                    </SelectItem>
+                    <SelectItem value="all">All Cities</SelectItem>
                     {availableCities.map((city) => (
                       <SelectItem key={city} value={city}>
                         {city}
@@ -1231,9 +1227,7 @@ export default function VendorsDirectory() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <SlidersHorizontal className="w-5 h-5 text-gray-900" />
-                      <h3 className="text-lg text-gray-900">
-                        Filters
-                      </h3>
+                      <h3 className="text-lg text-gray-900">Filters</h3>
                     </div>
                     {(searchQuery ||
                       regionFilter !== "all" ||
@@ -1257,17 +1251,13 @@ export default function VendorsDirectory() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Search className="w-4 h-4 text-gray-600" />
-                        <label className="text-sm text-gray-900">
-                          Search
-                        </label>
+                        <label className="text-sm text-gray-900">Search</label>
                       </div>
                       <Input
                         type="text"
                         placeholder="Search businesses..."
                         value={searchQuery}
-                        onChange={(e) =>
-                          setSearchQuery(e.target.value)
-                        }
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-gray-50 border-0 rounded-lg h-9"
                       />
                     </div>
@@ -1276,9 +1266,7 @@ export default function VendorsDirectory() {
 
                     {/* Category */}
                     <div className="space-y-3">
-                      <label className="text-sm text-gray-900">
-                        Category
-                      </label>
+                      <label className="text-sm text-gray-900">Category</label>
                       <Select
                         value={categoryFilter}
                         onValueChange={setCategoryFilter}
@@ -1287,14 +1275,9 @@ export default function VendorsDirectory() {
                           <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            All Categories
-                          </SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           {categories.map((cat) => (
-                            <SelectItem
-                              key={cat.id}
-                              value={cat.name}
-                            >
+                            <SelectItem key={cat.id} value={cat.name}>
                               {cat.name}
                             </SelectItem>
                           ))}
@@ -1308,9 +1291,7 @@ export default function VendorsDirectory() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-gray-600" />
-                        <label className="text-sm text-gray-900">
-                          Region
-                        </label>
+                        <label className="text-sm text-gray-900">Region</label>
                       </div>
                       <Select
                         value={regionFilter}
@@ -1320,14 +1301,9 @@ export default function VendorsDirectory() {
                           <SelectValue placeholder="All Regions" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            All Regions
-                          </SelectItem>
+                          <SelectItem value="all">All Regions</SelectItem>
                           {regions.map((region) => (
-                            <SelectItem
-                              key={region.id}
-                              value={region.name}
-                            >
+                            <SelectItem key={region.id} value={region.name}>
                               {region.name}
                             </SelectItem>
                           ))}
@@ -1341,21 +1317,14 @@ export default function VendorsDirectory() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-gray-600" />
-                        <label className="text-sm text-gray-900">
-                          City
-                        </label>
+                        <label className="text-sm text-gray-900">City</label>
                       </div>
-                      <Select
-                        value={cityFilter}
-                        onValueChange={setCityFilter}
-                      >
+                      <Select value={cityFilter} onValueChange={setCityFilter}>
                         <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
                           <SelectValue placeholder="All Cities" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">
-                            All Cities
-                          </SelectItem>
+                          <SelectItem value="all">All Cities</SelectItem>
                           {availableCities.map((city) => (
                             <SelectItem key={city} value={city}>
                               {city}
@@ -1408,11 +1377,7 @@ export default function VendorsDirectory() {
             )}
 
             {/* Main Content */}
-            <div
-              className={
-                showMap ? "flex-1 min-w-0" : "flex-1 min-w-0"
-              }
-            >
+            <div className={showMap ? "flex-1 min-w-0" : "flex-1 min-w-0"}>
               {/* Top Bar */}
               <div className="mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1476,7 +1441,7 @@ export default function VendorsDirectory() {
                         Enter Zip Code
                       </Button>
                     ) : null}
-                    
+
                     <Button
                       variant={showMap ? "default" : "outline"}
                       onClick={() => setShowMap(!showMap)}
@@ -1491,16 +1456,19 @@ export default function VendorsDirectory() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Manual Location Input - Show when geolocation fails */}
                 {showManualLocation && !userLocation && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3 mb-3">
                       <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <h3 className="text-sm text-blue-900 mb-1">Enter Your Location Manually</h3>
+                        <h3 className="text-sm text-blue-900 mb-1">
+                          Enter Your Location Manually
+                        </h3>
                         <p className="text-xs text-blue-700">
-                          Browser location is blocked. Enter your zip code or city to see distances.
+                          Browser location is blocked. Enter your zip code or
+                          city to see distances.
                         </p>
                       </div>
                     </div>
@@ -1510,7 +1478,9 @@ export default function VendorsDirectory() {
                         placeholder="Enter zip code or city..."
                         value={manualZipCode}
                         onChange={(e) => setManualZipCode(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleManualLocation()}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleManualLocation()
+                        }
                         className="flex-1 rounded-lg h-9"
                         disabled={locationLoading}
                       />
@@ -1528,7 +1498,9 @@ export default function VendorsDirectory() {
                       </Button>
                     </div>
                     {locationError && (
-                      <p className="text-xs text-red-600 mt-2">{locationError}</p>
+                      <p className="text-xs text-red-600 mt-2">
+                        {locationError}
+                      </p>
                     )}
                   </div>
                 )}
@@ -1540,9 +1512,7 @@ export default function VendorsDirectory() {
                   <InteractiveBusinessMap
                     vendors={sortedVendors}
                     categories={categories}
-                    onVendorSelect={(vendorId) =>
-                      setSelectedVendorId(vendorId)
-                    }
+                    onVendorSelect={(vendorId) => setSelectedVendorId(vendorId)}
                     selectedVendorId={selectedVendorId}
                   />
                 </div>
@@ -1551,9 +1521,7 @@ export default function VendorsDirectory() {
               {/* Vendor Grid with Map */}
               <div
                 className={
-                  showMap
-                    ? "grid grid-cols-1 lg:grid-cols-2 gap-6"
-                    : ""
+                  showMap ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : ""
                 }
               >
                 {/* Vendor Cards */}
@@ -1568,8 +1536,7 @@ export default function VendorsDirectory() {
                         Loading businesses...
                       </h3>
                       <p className="text-gray-600">
-                        Please wait while we fetch the latest
-                        listings
+                        Please wait while we fetch the latest listings
                       </p>
                     </div>
                   )}
@@ -1583,9 +1550,7 @@ export default function VendorsDirectory() {
                       <h3 className="text-xl text-gray-900 mb-2">
                         Error loading businesses
                       </h3>
-                      <p className="text-gray-600 mb-6">
-                        {error}
-                      </p>
+                      <p className="text-gray-600 mb-6">{error}</p>
                       <Button
                         onClick={() => fetchPlaces(1)}
                         className="rounded-lg bg-sky-600 hover:bg-sky-700"
@@ -1596,230 +1561,184 @@ export default function VendorsDirectory() {
                   )}
 
                   {/* Results */}
-                  {!loading &&
-                    !error &&
-                    sortedVendors.length > 0 && (
-                      <div
-                        className={
-                          showMap
-                            ? "grid grid-cols-1 sm:grid-cols-2 gap-6"
-                            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                        }
-                      >
-                        {sortedVendors.map((vendor) => (
-                          <VendorBusinessCard
-                            key={vendor.id}
-                            vendor={vendor}
-                            onNavigate={saveScrollPosition}
-                          />
-                        ))}
-                      </div>
-                    )}
+                  {!loading && !error && sortedVendors.length > 0 && (
+                    <div
+                      className={
+                        showMap
+                          ? "grid grid-cols-1 sm:grid-cols-2 gap-6"
+                          : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                      }
+                    >
+                      {sortedVendors.map((vendor) => (
+                        <VendorBusinessCard
+                          key={vendor.id}
+                          vendor={vendor}
+                          onNavigate={saveScrollPosition}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* No Results */}
-                  {!loading &&
-                    !error &&
-                    sortedVendors.length === 0 && (
-                      <div className="text-center py-24">
-                        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <FilterIcon className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-xl text-gray-900 mb-2">
-                          No businesses found
-                        </h3>
-                        <p className="text-gray-600 mb-6">
-                          Try adjusting your search or filters
-                        </p>
-                        <Button
-                          onClick={clearAllFilters}
-                          className="rounded-lg"
-                        >
-                          Clear Filters
-                        </Button>
+                  {!loading && !error && sortedVendors.length === 0 && (
+                    <div className="text-center py-24">
+                      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <FilterIcon className="w-8 h-8 text-gray-400" />
                       </div>
-                    )}
+                      <h3 className="text-xl text-gray-900 mb-2">
+                        No businesses found
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        Try adjusting your search or filters
+                      </p>
+                      <Button onClick={clearAllFilters} className="rounded-lg">
+                        Clear Filters
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Load More */}
-                  {!loading &&
-                    !error &&
-                    sortedVendors.length > 0 && (
-                      <div className="mt-12">
-                        {/* Pagination Controls */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-gray-100 rounded-xl p-4">
-                          {/* Results Info */}
-                          <div className="text-sm text-gray-600">
-                            Showing{" "}
-                            <span className="text-gray-900">
-                              {(currentPage - 1) * 12 + 1}
-                            </span>{" "}
-                            to{" "}
-                            <span className="text-gray-900">
-                              {Math.min(
-                                currentPage * 12,
-                                totalItems,
-                              )}
-                            </span>{" "}
-                            of{" "}
-                            <span className="text-gray-900">
-                              {totalItems}
-                            </span>{" "}
-                            results
-                          </div>
+                  {!loading && !error && sortedVendors.length > 0 && (
+                    <div className="mt-12">
+                      {/* Pagination Controls */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-gray-100 rounded-xl p-4">
+                        {/* Results Info */}
+                        <div className="text-sm text-gray-600">
+                          Showing{" "}
+                          <span className="text-gray-900">
+                            {(currentPage - 1) * 12 + 1}
+                          </span>{" "}
+                          to{" "}
+                          <span className="text-gray-900">
+                            {Math.min(currentPage * 12, totalItems)}
+                          </span>{" "}
+                          of <span className="text-gray-900">{totalItems}</span>{" "}
+                          results
+                        </div>
 
-                          {/* Pagination Buttons */}
-                          <div className="flex items-center gap-2">
-                            {/* Previous Button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handlePageChange(
-                                  currentPage - 1,
-                                )
-                              }
-                              disabled={
-                                currentPage === 1 || loading
-                              }
-                              className="rounded-lg"
-                            >
-                              Previous
-                            </Button>
+                        {/* Pagination Buttons */}
+                        <div className="flex items-center gap-2">
+                          {/* Previous Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1 || loading}
+                            className="rounded-lg"
+                          >
+                            Previous
+                          </Button>
 
-                            {/* Page Numbers */}
-                            <div className="flex items-center gap-1">
-                              {/* First Page */}
-                              {currentPage > 2 && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handlePageChange(1)
-                                    }
-                                    className="rounded-lg w-9 h-9 p-0"
-                                  >
-                                    1
-                                  </Button>
-                                  {currentPage > 3 && (
-                                    <span className="text-gray-400 px-1">
-                                      ...
-                                    </span>
-                                  )}
-                                </>
-                              )}
-
-                              {/* Previous Page */}
-                              {currentPage > 1 && (
+                          {/* Page Numbers */}
+                          <div className="flex items-center gap-1">
+                            {/* First Page */}
+                            {currentPage > 2 && (
+                              <>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() =>
-                                    handlePageChange(
-                                      currentPage - 1,
-                                    )
-                                  }
+                                  onClick={() => handlePageChange(1)}
                                   className="rounded-lg w-9 h-9 p-0"
                                 >
-                                  {currentPage - 1}
+                                  1
                                 </Button>
-                              )}
+                                {currentPage > 3 && (
+                                  <span className="text-gray-400 px-1">
+                                    ...
+                                  </span>
+                                )}
+                              </>
+                            )}
 
-                              {/* Current Page */}
+                            {/* Previous Page */}
+                            {currentPage > 1 && (
                               <Button
-                                variant="default"
+                                variant="outline"
                                 size="sm"
-                                className="rounded-lg w-9 h-9 p-0 bg-sky-600 hover:bg-sky-700 text-white"
+                                onClick={() =>
+                                  handlePageChange(currentPage - 1)
+                                }
+                                className="rounded-lg w-9 h-9 p-0"
                               >
-                                {currentPage}
+                                {currentPage - 1}
                               </Button>
+                            )}
 
-                              {/* Next Page */}
-                              {currentPage < totalPages && (
+                            {/* Current Page */}
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="rounded-lg w-9 h-9 p-0 bg-sky-600 hover:bg-sky-700 text-white"
+                            >
+                              {currentPage}
+                            </Button>
+
+                            {/* Next Page */}
+                            {currentPage < totalPages && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handlePageChange(currentPage + 1)
+                                }
+                                className="rounded-lg w-9 h-9 p-0"
+                              >
+                                {currentPage + 1}
+                              </Button>
+                            )}
+
+                            {/* Last Page */}
+                            {currentPage < totalPages - 1 && (
+                              <>
+                                {currentPage < totalPages - 2 && (
+                                  <span className="text-gray-400 px-1">
+                                    ...
+                                  </span>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() =>
-                                    handlePageChange(
-                                      currentPage + 1,
-                                    )
-                                  }
+                                  onClick={() => handlePageChange(totalPages)}
                                   className="rounded-lg w-9 h-9 p-0"
                                 >
-                                  {currentPage + 1}
+                                  {totalPages}
                                 </Button>
-                              )}
-
-                              {/* Last Page */}
-                              {currentPage < totalPages - 1 && (
-                                <>
-                                  {currentPage <
-                                    totalPages - 2 && (
-                                    <span className="text-gray-400 px-1">
-                                      ...
-                                    </span>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handlePageChange(
-                                        totalPages,
-                                      )
-                                    }
-                                    className="rounded-lg w-9 h-9 p-0"
-                                  >
-                                    {totalPages}
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Next Button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handlePageChange(
-                                  currentPage + 1,
-                                )
-                              }
-                              disabled={
-                                currentPage === totalPages ||
-                                loading
-                              }
-                              className="rounded-lg"
-                            >
-                              Next
-                            </Button>
+                              </>
+                            )}
                           </div>
 
-                          {/* Go to Page Input (optional, for desktop) */}
-                          <div className="hidden lg:flex items-center gap-2 text-sm">
-                            <span className="text-gray-600">
-                              Go to page:
-                            </span>
-                            <input
-                              type="number"
-                              min="1"
-                              max={totalPages}
-                              value={currentPage}
-                              onChange={(e) => {
-                                const page = parseInt(
-                                  e.target.value,
-                                );
-                                if (
-                                  page >= 1 &&
-                                  page <= totalPages
-                                ) {
-                                  handlePageChange(page);
-                                }
-                              }}
-                              className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-transparent"
-                            />
-                          </div>
+                          {/* Next Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages || loading}
+                            className="rounded-lg"
+                          >
+                            Next
+                          </Button>
+                        </div>
+
+                        {/* Go to Page Input (optional, for desktop) */}
+                        <div className="hidden lg:flex items-center gap-2 text-sm">
+                          <span className="text-gray-600">Go to page:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={totalPages}
+                            value={currentPage}
+                            onChange={(e) => {
+                              const page = parseInt(e.target.value);
+                              if (page >= 1 && page <= totalPages) {
+                                handlePageChange(page);
+                              }
+                            }}
+                            className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-transparent"
+                          />
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Map Column */}
@@ -1859,9 +1778,7 @@ function VendorBusinessCard({
   const isClaimed = vendor.rating >= 4.5; // Mock logic - in real app would be a property
 
   // Generate stable review count based on vendor ID (won't change on re-render)
-  const reviewCount = Math.floor(
-    ((parseInt(vendor.id) * 7) % 150) + 10,
-  ); // Generates 10-159 reviews consistently
+  const reviewCount = Math.floor(((parseInt(vendor.id) * 7) % 150) + 10); // Generates 10-159 reviews consistently
 
   // Mock store hours
   const storeHours = [
@@ -1900,9 +1817,7 @@ function VendorBusinessCard({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg text-gray-950 truncate">
-                {vendor.name}
-              </h3>
+              <h3 className="text-lg text-gray-950 truncate">{vendor.name}</h3>
               {isClaimed && (
                 <Check className="w-5 h-5 text-sky-600 flex-shrink-0" />
               )}
@@ -1916,25 +1831,36 @@ function VendorBusinessCard({
         {/* Rating - Enhanced visual hierarchy */}
         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`w-4 h-4 transition-all ${
-                  i < Math.floor(vendor.rating)
-                    ? "fill-amber-400 text-amber-400"
-                    : i < vendor.rating
-                      ? "fill-amber-400/50 text-amber-400"
-                      : "fill-none text-gray-300"
-                }`}
-              />
-            ))}
+            {[...Array(5)].map((_, i) => {
+              const rating = Number(vendor.rating) || 0;
+              const isFullStar = i < Math.floor(rating);
+              const isHalfStar = i === Math.floor(rating) && rating % 1 >= 0.5;
+
+              return (
+                <div key={i} className="relative">
+                  {/* Background star (empty) */}
+                  <Star className="w-4 h-4 fill-none text-gray-300 transition-all" />
+                  {/* Foreground star (filled or half-filled) */}
+                  {(isFullStar || isHalfStar) && (
+                    <Star
+                      className="w-4 h-4 fill-amber-400 text-amber-400 absolute top-0 left-0 transition-all"
+                      style={
+                        isHalfStar
+                          ? {
+                              clipPath: "polygon(0 0, 50% 0, 50% 100%, 0 100%)",
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
           <span className="text-sm text-gray-950">
-            {vendor.rating}
+            {(Number(vendor.rating) || 0).toFixed(1)}
           </span>
-          <span className="text-sm text-gray-400">
-            ({reviewCount})
-          </span>
+          <span className="text-sm text-gray-400">({reviewCount})</span>
         </div>
 
         {/* Distance - if available */}
@@ -1963,11 +1889,7 @@ function VendorBusinessCard({
                 <span>Closed</span>
               </div>
             </TooltipTrigger>
-            <TooltipContent
-              side="top"
-              align="end"
-              className="w-48"
-            >
+            <TooltipContent side="top" align="end" className="w-48">
               <div className="text-xs space-y-1.5">
                 <div className="text-white pb-1.5 border-b border-white/20 mb-1.5">
                   Store Hours
@@ -1977,9 +1899,7 @@ function VendorBusinessCard({
                     key={index}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-gray-300">
-                      {schedule.day}
-                    </span>
+                    <span className="text-gray-300">{schedule.day}</span>
                     <span
                       className={
                         schedule.hours === "Closed"
@@ -2072,7 +1992,7 @@ function InteractiveBusinessMap({
       v.latitude &&
       v.longitude &&
       !isNaN(parseFloat(v.latitude)) &&
-      !isNaN(parseFloat(v.longitude)),
+      !isNaN(parseFloat(v.longitude))
   );
 
   // Debug: Log coordinates
@@ -2082,7 +2002,7 @@ function InteractiveBusinessMap({
       name: v.name,
       lat: v.latitude,
       lng: v.longitude,
-    })),
+    }))
   );
 
   if (vendorsWithLocation.length === 0) {
@@ -2091,12 +2011,9 @@ function InteractiveBusinessMap({
         <div className="aspect-square flex items-center justify-center bg-gray-50">
           <div className="text-center p-8">
             <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-gray-950 mb-2">
-              No Location Data
-            </h3>
+            <h3 className="text-gray-950 mb-2">No Location Data</h3>
             <p className="text-sm text-gray-500">
-              Businesses on this page don't have coordinates
-              available
+              Businesses on this page don't have coordinates available
             </p>
           </div>
         </div>
@@ -2112,7 +2029,7 @@ function InteractiveBusinessMap({
       "Category ID:",
       vendor.categoryId,
       "Specialty:",
-      vendor.specialty,
+      vendor.specialty
     );
     console.log(
       "📦 Available categories:",
@@ -2121,19 +2038,14 @@ function InteractiveBusinessMap({
         name: c.name,
         hasIcon: !!c.icon?.src,
         iconSrc: c.icon?.src,
-      })),
+      }))
     );
 
     // Find the category by ID first (most accurate)
     let category;
     if (vendor.categoryId) {
       category = categories.find((cat) => cat.id === vendor.categoryId);
-      console.log(
-        "🎯 Matched by ID:",
-        vendor.categoryId,
-        "→",
-        category?.name,
-      );
+      console.log("🎯 Matched by ID:", vendor.categoryId, "→", category?.name);
     }
 
     // Fallback: try to match by name if no ID match
@@ -2141,16 +2053,9 @@ function InteractiveBusinessMap({
       category = categories.find(
         (cat) =>
           cat.name.toLowerCase() === vendor.specialty.toLowerCase() ||
-          vendor.specialty
-            .toLowerCase()
-            .includes(cat.name.toLowerCase()),
+          vendor.specialty.toLowerCase().includes(cat.name.toLowerCase())
       );
-      console.log(
-        "🔤 Matched by name:",
-        vendor.specialty,
-        "→",
-        category?.name,
-      );
+      console.log("🔤 Matched by name:", vendor.specialty, "→", category?.name);
     }
 
     console.log(
@@ -2163,7 +2068,7 @@ function InteractiveBusinessMap({
             hasIconObject: !!category.icon,
             iconObject: category.icon,
           }
-        : "NO MATCH",
+        : "NO MATCH"
     );
 
     return category?.icon?.src;
@@ -2188,7 +2093,7 @@ function InteractiveBusinessMap({
       specialty: m.specialty,
       hasIcon: !!m.categoryIcon,
       iconUrl: m.categoryIcon,
-    })),
+    }))
   );
 
   return (
@@ -2210,9 +2115,7 @@ function InteractiveBusinessMap({
           </span>
           <div className="flex items-center gap-1 text-gray-400">
             <MapPin className="w-4 h-4" />
-            <span className="text-xs">
-              Click pins to filter results
-            </span>
+            <span className="text-xs">Click pins to filter results</span>
           </div>
         </div>
       </div>
