@@ -276,7 +276,7 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
             <div className="flex items-center gap-2">
               <span className="text-lg text-gray-900">${product.price.toFixed(2)}</span>
               {hasDiscount != 0 && (
-                <span className="text-lg text-gray-900">${product.price.toFixed(2)}</span>
+                <span className="text-lg text-gray-900 line-through">${product.originalPrice.toFixed(2)}</span>
               )}
             </div>
           </div>
