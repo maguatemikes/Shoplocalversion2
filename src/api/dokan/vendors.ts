@@ -24,13 +24,10 @@ export const getNearbyVendors = async (lat, lng, radius) => {
 
 export const getVendorDetail = async (slug) => {
   try {
-    const response = await axios.get(
-      `${BASE_URL}/vendor-by-username/${slug}?ddddd22d`,
-      {
-        headers: { "Content-Type": "application/json" },
-        maxBodyLength: Infinity,
-      }
-    );
+    const response = await axios.get(`${BASE_URL}/vendor-by-username/${slug}?ddddd22d`, {
+      headers: { "Content-Type": "application/json" },
+      maxBodyLength: Infinity,
+    });
 
     console.log("vendor", response.data);
     return response.data;

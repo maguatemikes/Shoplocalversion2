@@ -822,13 +822,11 @@ export function VendorStorefront({
                 {/* Main About Content */}
                 <div className="lg:col-span-2 space-y-6">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <h2 className="text-xl text-gray-900 mb-4">
-                      About {vendor.name}
-                    </h2>
-                    <div
-                      className="prose"
-                      dangerouslySetInnerHTML={{ __html: vendor.bio }}
-                    />
+                    <h2 className="text-xl text-gray-900 mb-4">About {vendor.name}</h2>
+                   <div
+                    className="text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: vendor.bio }}
+                  />
                   </div>
 
                   {/* Store Highlights */}
