@@ -494,7 +494,7 @@ const handleAddToCart = () => {
         {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+            <TabsList className="w-full flex flex-wrap justify-start border-b rounded-none h-auto p-0 bg-transparent">
               <TabsTrigger
                 value="description"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-6 py-4"
@@ -576,13 +576,10 @@ const handleAddToCart = () => {
                     Warranty Coverage
                   </h3>
                   <div className="bg-gray-50 rounded-xl p-6 space-y-3 text-gray-600">
-                    <p>This product comes with a comprehensive 1-year manufacturer warranty covering:</p>
-                    <ul className="space-y-2 ml-4">
-                      <li>• Manufacturing defects</li>
-                      <li>• Material quality issues</li>
-                      <li>• Workmanship problems</li>
-                    </ul>
-                    <p className="text-sm pt-2">Warranty does not cover normal wear and tear or damage from misuse.</p>
+                      <div
+                        className="prose"
+                        dangerouslySetInnerHTML={{ __html: xtraData.warranty }}
+                      />
                   </div>
                 </div>
                 <div>
@@ -591,13 +588,10 @@ const handleAddToCart = () => {
                     Return Policy
                   </h3>
                   <div className="bg-gray-50 rounded-xl p-6 space-y-3 text-gray-600">
-                    <p>We offer a 30-day return policy for this product. Returns are accepted if:</p>
-                    <ul className="space-y-2 ml-4">
-                      <li>• Product is unused and in original condition</li>
-                      <li>• Original packaging is intact</li>
-                      <li>• All accessories and documentation are included</li>
-                    </ul>
-                    <p className="text-sm pt-2">Return shipping costs may apply. Contact seller for return authorization.</p>
+                      <div
+                        className="prose"
+                        dangerouslySetInnerHTML={{ __html: xtraData.return_policy }}
+                      />
                   </div>
                 </div>
               </div>
@@ -611,32 +605,10 @@ const handleAddToCart = () => {
                     Care & Maintenance
                   </h3>
                   <div className="bg-gray-50 rounded-xl p-6">
-                    <div className="space-y-4 text-gray-600">
-                      <div>
-                        <p className="text-gray-900 mb-2">Cleaning Instructions:</p>
-                        <ul className="space-y-1 ml-4">
-                          <li>• Spot clean with mild soap and water</li>
-                          <li>• Do not use harsh chemicals or bleach</li>
-                          <li>• Air dry only - do not machine dry</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 mb-2">Storage:</p>
-                        <ul className="space-y-1 ml-4">
-                          <li>• Store in a cool, dry place</li>
-                          <li>• Keep away from direct sunlight</li>
-                          <li>• Avoid extreme temperatures</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 mb-2">Usage Tips:</p>
-                        <ul className="space-y-1 ml-4">
-                          <li>• Follow all safety guidelines included with product</li>
-                          <li>• Inspect regularly for wear and tear</li>
-                          <li>• Keep out of reach of children if applicable</li>
-                        </ul>
-                      </div>
-                    </div>
+                       <div
+                        className="prose"
+                        dangerouslySetInnerHTML={{ __html: xtraData.care_maintenance }}
+                      />
                   </div>
                 </div>
               </div>
