@@ -30,7 +30,7 @@ export const getProductDetail = async (slug) => {
       maxBodyLength: Infinity,
     });
 
-    console.log("xtra", response.data);
+    console.log("xtra data", response.data);
     return response.data;
 
   } catch (error) {
