@@ -9,14 +9,20 @@ import { products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { getProductDetail,getNearbyVendors, getShortProductDetail  } from '../api/woo/products';
 import AddToCartModal from "../components/AddtoCartModal";
+import VariationSelector from '../components/VariationSelector';
 interface ProductDetailProps {
   productSlug: string;
 }
+
+
+
 
 export function ProductDetail({ productSlug }: ProductDetailProps) {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [product_item,setProducItem] = useState({
+    "attributes": [],
+    "variations":[],
     "acceptsOffers": false,
     "brand": "",
     "category": "Uncategorized",
@@ -74,6 +80,86 @@ const [lastAddedProduct, setLastAddedProduct] = useState({
 name: "",
 image: "",
 });
+
+const initialSelected = {}; // you can optionally pick the first variation to pre-fill
+const [selectedAttributes, setSelectedAttributes] = useState(initialSelected);
+
+
+
+
+const getAvailableOptions = (variations, selectedAttributes) => {
+  const available = {};
+
+  if (!variations || variations.length === 0) return available;
+
+  // Get all attribute keys (remove "pa_")
+  const attributeKeys = Object.keys(variations[0].attributes).map(k => k.replace(/^pa_/, ''));
+
+  attributeKeys.forEach(attrKey => {
+    // Filter variations that match current selected attributes (except this attribute)
+    const options = variations
+      .filter(v =>
+        Object.entries(selectedAttributes).every(([key, value]) => {
+          if (key.toLowerCase() === attrKey.toLowerCase()) return true; // skip current attribute
+          const wcKey = `pa_${key.toLowerCase()}`;
+          return v.attributes[wcKey]?.toLowerCase() === value.toLowerCase();
+        })
+      )
+      .map(v => v.attributes[`pa_${attrKey.toLowerCase()}`]);
+
+    // Remove duplicates
+    available[attrKey] = [...new Set(options)];
+  });
+
+  return available;
+};
+
+const handleAttributeChange = (attrName, value) => {
+  const newSelected = {
+    ...selectedAttributes,
+    [attrName]: value
+  };
+
+  setSelectedAttributes(newSelected);
+
+  // Update available options dynamically
+  setAvailableOptions(getAvailableOptions(product_item.variations, newSelected));
+};
+
+
+const [availableOptions, setAvailableOptions] = useState(() =>
+  getAvailableOptions(product_item.variations, initialSelected)
+);
+
+
+
+
+const handleVariationChange = (selectedAttrs) => {
+  console.log(product_item.variations);
+  const normalize = (str) => str.toLowerCase().replace(/\s+/g, '-');
+const matched = product_item.variations.find(v =>
+  Object.keys(selectedAttrs).every(key => {
+    const wcKey = `pa_${key.toLowerCase()}`;
+    const selectedValue = normalize(selectedAttrs[key]);
+    const variationValue = v.attributes[wcKey] ? normalize(v.attributes[wcKey]) : '';
+    return selectedValue === variationValue;
+  })
+);
+
+  console.log('matched',matched);
+
+  if (matched) {
+    setProduct(prev => ({
+      ...prev,
+      price: parseFloat(matched.price),
+      originalPrice: parseFloat(matched.regularPrice),
+      image: matched.image || prev.image,
+      stock: matched.stock,
+      salePrice: matched.salePrice || null,
+      selectedAttributes: matched.attributes || {}
+    }));
+  }
+};
 
 
 // 1️⃣ Fetch product detail on product ID change
@@ -240,11 +326,18 @@ const handleAddToCart = () => {
               {/* Main Image */}
               <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4">
                 <ImageWithFallback
-                  src={Array.isArray(xtraData?.gallery_images) && xtraData.gallery_images.length > 0
-                    ? [xtraData.featured_img, ...xtraData.gallery_images][selectedImage] || xtraData.featured_img
-                    : xtraData.featured_img}
+                  src={
+                    Array.isArray(xtraData?.gallery_images) && xtraData.gallery_images.length > 0
+                      ? [
+                          product_item?.image || xtraData.featured_img, // Use variation image if available
+                          ...xtraData.gallery_images
+                        ][selectedImage] || (product_item?.image || xtraData.featured_img)
+                      : product.image || xtraData.featured_img
+                  }
                   alt={product_item?.name ?? 'Product'}
-                  className="w-full h-full object-cover" />
+                  className="w-full h-full object-cover"
+                />
+
               </div>
 
               {/* Thumbnails */}
@@ -285,7 +378,7 @@ const handleAddToCart = () => {
             </div>
 
             {/* Title */}
-            <h1 className="text-4xl text-gray-900 mb-4">{product_item.name}</h1>
+            <h1 className="text-4xl text-gray-900 mb-4">{xtraData.name}</h1>
 
             {/* Rating */}
             <div className="flex items-center gap-4 mb-6">
@@ -328,6 +421,17 @@ const handleAddToCart = () => {
                 <span>In Stock - Ready to Ship</span>
               </div> : null}
 
+              {/* Attribute */}
+
+                  <div className="mb-8">
+                    <h2>Choose Options</h2>
+                    <VariationSelector
+                      attributes={product_item.attributes}
+                      variations={product_item.variations} // new prop for dynamic options
+                      onChange={handleVariationChange}
+                    />
+
+                  </div>
 
             {/* Quantity */}
             <div className="mb-8">
@@ -355,6 +459,8 @@ const handleAddToCart = () => {
                 <span className="text-gray-600">Available: {product_item.stock} units</span>
               </div>
             </div>
+
+
 
             {/* Actions */}
             <div className="flex gap-4 mb-8">

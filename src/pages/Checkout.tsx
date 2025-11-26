@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Lock, Package, MapPin, Mail, Phone, User } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -9,22 +9,34 @@ import { Checkbox } from '../components/ui/checkbox';
 import { products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  vendor: string;
+  image: string;
+  quantity: number;
+}
+
 export function Checkout() {
   const navigate = useNavigate();
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
   const [shippingMethod, setShippingMethod] = useState('standard');
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Mock cart data
-  const cartItems = [
-    { product: products[0], quantity: 2 },
-    { product: products[1], quantity: 1 },
-  ];
-
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = shippingMethod === 'standard' ? 25 : shippingMethod === 'express' ? 45 : 0;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
+  useEffect(() => {
+   
+      const stored = JSON.parse(localStorage.getItem("cart") || "[]");
+      setCartItems(stored);
+    }
+  );
+  
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -257,16 +269,18 @@ export function Checkout() {
                 {cartItems.map((item, index) => (
                   <div key={index} className="flex gap-3">
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      <ImageWithFallback
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
+                            <ImageWithFallback
+                              src={item.image}
+                              alt={item.name}
+                            />
+                            <p>{item.name}</p>
+                            <p>${(item.price * item.quantity).toFixed(2)}</p>
+
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{item.product.name}</p>
+                      <p className="text-sm text-gray-900 truncate">{item.name}</p>
                       <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                      <p className="text-sm text-gray-900">${(item.product.price * item.quantity).toFixed(2)}</p>
+                      <p className="text-sm text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
