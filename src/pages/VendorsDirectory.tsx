@@ -87,8 +87,8 @@ interface Place {
   featured_media?: number;
   link?: string;
   rating?: number;
-  featured_image?: { src?: string; sizes?: any };
-  images?: Array<{ src?: string }>;
+  featured_image?: { src?: string; thumbnail?: string; sizes?: any };
+  images?: Array<{ src?: string; thumbnail?: string }>;
   _embedded?: {
     "wp:featuredmedia"?: Array<{
       source_url?: string;
@@ -149,10 +149,17 @@ function placeToVendor(
     return html.replace(/<[^>]*>/g, "").trim();
   };
 
-  // Get image - use featured_image or images array from API
-  const imageUrl = place.featured_image?.src || place.images?.[0]?.src || "";
-  const logo = imageUrl || "https://via.placeholder.com/150";
-  const banner = imageUrl || "https://via.placeholder.com/800x300";
+  // Get image - use thumbnail for cards, src for full size
+  // GeoDirectory uses thumbnail for listing displays
+  const thumbnailUrl =
+    place.featured_image?.thumbnail || place.images?.[0]?.thumbnail || "";
+  const fullImageUrl =
+    place.featured_image?.src || place.images?.[0]?.src || "";
+
+  const logo =
+    thumbnailUrl || fullImageUrl || "https://via.placeholder.com/150";
+  const banner =
+    fullImageUrl || thumbnailUrl || "https://via.placeholder.com/800x300";
 
   // Create tagline from content (first 100 chars)
   const content = stripHtml(
@@ -1799,11 +1806,6 @@ function VendorBusinessCard({
         {/* Gradient overlay for better badge visibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        {isFeatured && (
-          <div className="absolute top-4 right-4 bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs shadow-lg backdrop-blur-sm">
-            ⭐ Featured
-          </div>
-        )}
         {!isClaimed && (
           <div className="absolute top-4 left-4 bg-amber-600 text-white px-2 py-0.5 rounded text-xs font-normal shadow-lg backdrop-blur-sm">
             Unclaimed

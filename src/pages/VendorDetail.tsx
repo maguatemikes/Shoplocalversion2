@@ -1,10 +1,27 @@
-import { ArrowLeft, Star, DollarSign, MapPin, Phone, Globe, Clock, Mail, Send, User, Flag, CheckCircle, Shield, Package, ShoppingBag, Store } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { Vendor, products } from '../lib/mockData';
-import { ProductCard } from '../components/ProductCard';
-import { LeafletMap } from '../components/LeafletMap';
+import {
+  ArrowLeft,
+  Star,
+  DollarSign,
+  MapPin,
+  Phone,
+  Globe,
+  Clock,
+  Mail,
+  Send,
+  User,
+  Flag,
+  CheckCircle,
+  Shield,
+  Package,
+  ShoppingBag,
+  Store,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { Vendor, products } from "../lib/mockData";
+import { ProductCard } from "../components/ProductCard";
+import { LeafletMap } from "../components/LeafletMap";
 
 interface VendorDetailProps {
   vendor: Vendor;
@@ -12,20 +29,22 @@ interface VendorDetailProps {
 
 export function VendorDetail({ vendor }: VendorDetailProps) {
   const navigate = useNavigate();
-  const [categoryIcon, setCategoryIcon] = useState<string | undefined>(undefined);
+  const [categoryIcon, setCategoryIcon] = useState<string | undefined>(
+    undefined
+  );
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
 
-  console.log('🏪 VendorDetail - Vendor data:', {
+  console.log("🏪 VendorDetail - Vendor data:", {
     id: vendor.id,
     name: vendor.name,
     categoryId: vendor.categoryId,
     specialty: vendor.specialty,
-    hasLatLng: !!(vendor.latitude && vendor.longitude)
+    hasLatLng: !!(vendor.latitude && vendor.longitude),
   });
 
   // Fetch category icon from GeoDirectory API
@@ -39,22 +58,24 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
         const response = await fetch(
           `https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places/categories?per_page=100&hide_empty=false`
         );
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const categories = await response.json();
-        
+
         // Find the matching category by ID
-        const category = categories.find((cat: any) => cat.id === vendor.categoryId);
-        
+        const category = categories.find(
+          (cat: any) => cat.id === vendor.categoryId
+        );
+
         // Check if category has an icon
         if (category?.icon?.src) {
           setCategoryIcon(category.icon.src);
         }
       } catch (error) {
-        console.error('❌ Error fetching category icon:', error);
+        console.error("❌ Error fetching category icon:", error);
       }
     };
 
@@ -65,48 +86,48 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
   const isClaimed = vendor.rating >= 4.5; // In real app, this would be a property
 
   // Get vendor products
-  const vendorProducts = products.filter(p => p.vendorSlug === vendor.slug);
+  const vendorProducts = products.filter((p) => p.vendorSlug === vendor.slug);
 
   // Mock data for demonstration
   const mockReviews = [
     {
       id: 1,
-      author: 'Jennifer Thompson',
-      date: '1 week ago',
+      author: "Jennifer Thompson",
+      date: "1 week ago",
       rating: 5,
-      text: "Best clam chowder I've ever had! The clams were incredibly fresh and the portion sizes are generous. The staff was friendly and knowledgeable about their daily catches. Perfect spot for seafood lovers!"
+      text: "Best clam chowder I've ever had! The clams were incredibly fresh and the portion sizes are generous. The staff was friendly and knowledgeable about their daily catches. Perfect spot for seafood lovers!",
     },
     {
       id: 2,
-      author: 'Robert Wilson',
-      date: '2 weeks ago',
+      author: "Robert Wilson",
+      date: "2 weeks ago",
       rating: 4,
-      text: "Great local gem! The steamed clams were fantastic and the prices are very reasonable. Love that they have a seafood market too - picked up some fresh fish to take home. Will definitely be back!"
+      text: "Great local gem! The steamed clams were fantastic and the prices are very reasonable. Love that they have a seafood market too - picked up some fresh fish to take home. Will definitely be back!",
     },
     {
       id: 3,
-      author: 'Maria Santos',
-      date: '3 weeks ago',
+      author: "Maria Santos",
+      date: "3 weeks ago",
       rating: 5,
-      text: "Took the family here for dinner and everyone loved it! The crab cakes were amazing and the oysters were so fresh. Great casual atmosphere and the kids loved the fried clam strips. Highly recommend!"
+      text: "Took the family here for dinner and everyone loved it! The crab cakes were amazing and the oysters were so fresh. Great casual atmosphere and the kids loved the fried clam strips. Highly recommend!",
     },
     {
       id: 4,
-      author: 'David Johnson',
-      date: '1 month ago',
+      author: "David Johnson",
+      date: "1 month ago",
       rating: 4,
-      text: "Solid seafood spot in Berlin. The lobster roll was delicious and packed with meat. Service was quick and friendly. Good value for the quality of seafood you get."
-    }
+      text: "Solid seafood spot in Berlin. The lobster roll was delicious and packed with meat. Service was quick and friendly. Good value for the quality of seafood you get.",
+    },
   ];
 
   const businessHours = [
-    { day: 'Monday', hours: '11:00 AM - 9:00 PM' },
-    { day: 'Tuesday', hours: '11:00 AM - 9:00 PM' },
-    { day: 'Wednesday', hours: '11:00 AM - 9:00 PM' },
-    { day: 'Thursday', hours: '11:00 AM - 9:00 PM' },
-    { day: 'Friday', hours: '11:00 AM - 10:00 PM' },
-    { day: 'Saturday', hours: '11:00 AM - 10:00 PM' },
-    { day: 'Sunday', hours: '12:00 PM - 9:00 PM' }
+    { day: "Monday", hours: "11:00 AM - 9:00 PM" },
+    { day: "Tuesday", hours: "11:00 AM - 9:00 PM" },
+    { day: "Wednesday", hours: "11:00 AM - 9:00 PM" },
+    { day: "Thursday", hours: "11:00 AM - 9:00 PM" },
+    { day: "Friday", hours: "11:00 AM - 10:00 PM" },
+    { day: "Saturday", hours: "11:00 AM - 10:00 PM" },
+    { day: "Sunday", hours: "12:00 PM - 9:00 PM" },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,7 +141,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4">
           <button
-            onClick={() => navigate('/vendors/')}
+            onClick={() => navigate("/vendors/")}
             className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -149,7 +170,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
               {/* Title and Rating */}
               <div>
                 <h1 className="text-3xl text-gray-900 mb-3">{vendor.name}</h1>
-                
+
                 <div className="flex items-center gap-4 mb-4">
                   <div className="flex items-center gap-2">
                     <div className="flex">
@@ -158,15 +179,15 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                           key={i}
                           className={`w-4 h-4 ${
                             i < Math.floor(vendor.rating)
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-300'
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
                           }`}
                         />
                       ))}
                     </div>
                     <span className="text-gray-600 text-sm">(89 reviews)</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-1 text-gray-600">
                     <DollarSign className="w-4 h-4" />
                     <span className="text-sm">$10–20</span>
@@ -198,22 +219,24 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
 
               {/* Contact Information */}
               <div>
-                <h2 className="text-lg text-gray-900 mb-4">Contact Information</h2>
+                <h2 className="text-lg text-gray-900 mb-4">
+                  Contact Information
+                </h2>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-gray-500 mt-0.5 shrink-0" />
                     <p className="text-gray-900">{vendor.location}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-gray-500 shrink-0" />
                     <p className="text-gray-900">(856) 767-0401</p>
                   </div>
-                  
+
                   {vendor.socialLinks?.website && (
                     <div className="flex items-center gap-3">
                       <Globe className="w-5 h-5 text-gray-500 shrink-0" />
-                      <a 
+                      <a
                         href={vendor.socialLinks.website}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -231,7 +254,11 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
               {/* Visit Vendor Store Button - Always visible */}
               <div>
                 <button
-                  onClick={() => navigate(`/vendor/${vendor.slug}/`)}
+                  onClick={() =>
+                    navigate(`/vendor/${vendor.slug}/`, {
+                      state: { vendor },
+                    })
+                  }
                   className="w-full px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
                 >
                   <Store className="w-5 h-5" />
@@ -243,7 +270,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
               {vendorProducts.length > 0 && (
                 <>
                   <div className="h-px bg-gray-200" />
-                  
+
                   <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-xl p-4 border border-sky-200">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
@@ -251,12 +278,20 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                           <ShoppingBag className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-900">Shop from this vendor</p>
-                          <p className="text-xs text-gray-600">{vendorProducts.length} products available</p>
+                          <p className="text-sm text-gray-900">
+                            Shop from this vendor
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {vendorProducts.length} products available
+                          </p>
                         </div>
                       </div>
                       <button
-                        onClick={() => navigate(`/vendor/${vendor.slug}/`)}
+                        onClick={() =>
+                          navigate(`/vendor/${vendor.slug}/`, {
+                            state: { vendor },
+                          })
+                        }
                         className="px-4 py-2 bg-white hover:bg-gray-50 text-sky-600 border border-sky-300 rounded-lg transition-colors text-sm whitespace-nowrap shadow-sm hover:shadow-md"
                       >
                         Browse Products
@@ -273,11 +308,16 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                 <Clock className="w-5 h-5 text-gray-500" />
                 <h2 className="text-lg text-gray-900">Hours</h2>
               </div>
-              
+
               <div className="space-y-2">
                 {businessHours.map((schedule) => (
-                  <div key={schedule.day} className="flex items-center justify-between">
-                    <span className="text-gray-900 capitalize">{schedule.day.toLowerCase()}</span>
+                  <div
+                    key={schedule.day}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-gray-900 capitalize">
+                      {schedule.day.toLowerCase()}
+                    </span>
                     <span className="text-gray-600">{schedule.hours}</span>
                   </div>
                 ))}
@@ -287,15 +327,13 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
             {/* About */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h2 className="text-xl text-gray-900 mb-4">About</h2>
-              <p className="text-gray-600 leading-relaxed">
-                {vendor.bio}
-              </p>
+              <p className="text-gray-600 leading-relaxed">{vendor.bio}</p>
             </div>
 
             {/* Customer Reviews */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h2 className="text-lg text-gray-900 mb-6">Customer Reviews</h2>
-              
+
               <div className="space-y-6">
                 {mockReviews.map((review, index) => (
                   <div key={review.id}>
@@ -306,31 +344,35 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                           <User className="w-5 h-5 text-gray-600" />
                         </div>
                       </div>
-                      
+
                       {/* Review Content */}
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-gray-900">{review.author}</p>
-                          <span className="text-sm text-gray-500">{review.date}</span>
+                          <span className="text-sm text-gray-500">
+                            {review.date}
+                          </span>
                         </div>
-                        
+
                         <div className="flex mb-2">
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
                               className={`w-4 h-4 ${
                                 i < review.rating
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-gray-300'
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
                               }`}
                             />
                           ))}
                         </div>
-                        
-                        <p className="text-gray-600 leading-relaxed">{review.text}</p>
+
+                        <p className="text-gray-600 leading-relaxed">
+                          {review.text}
+                        </p>
                       </div>
                     </div>
-                    
+
                     {index < mockReviews.length - 1 && (
                       <div className="h-px bg-gray-200 mt-6" />
                     )}
@@ -340,59 +382,78 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200" id="contact-form">
+            <div
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200"
+              id="contact-form"
+            >
               <div className="flex items-center gap-2 mb-6">
                 <Mail className="w-5 h-5 text-gray-900" />
                 <h2 className="text-lg text-gray-900">Contact Business</h2>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-900 mb-2">Name</label>
+                    <label className="block text-sm text-gray-900 mb-2">
+                      Name
+                    </label>
                     <input
                       type="text"
                       placeholder="Your name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-gray-100 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm text-gray-900 mb-2">Email</label>
+                    <label className="block text-sm text-gray-900 mb-2">
+                      Email
+                    </label>
                     <input
                       type="email"
                       placeholder="your@email.com"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-gray-100 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
                     />
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm text-gray-900 mb-2">Subject</label>
+                  <label className="block text-sm text-gray-900 mb-2">
+                    Subject
+                  </label>
                   <input
                     type="text"
                     placeholder="What is this regarding?"
                     value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
                     className="w-full px-3 py-2 bg-gray-100 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm text-gray-900 mb-2">Message</label>
+                  <label className="block text-sm text-gray-900 mb-2">
+                    Message
+                  </label>
                   <textarea
                     placeholder="Your message..."
                     value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, message: e.target.value })
+                    }
                     rows={4}
                     className="w-full px-3 py-2 bg-gray-100 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-600 resize-none"
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   className="w-full px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
@@ -412,16 +473,18 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                 {vendor.latitude && vendor.longitude ? (
                   <div className="aspect-[21/9] bg-gray-100 relative">
                     <LeafletMap
-                      markers={[{
-                        id: vendor.id,
-                        name: vendor.name,
-                        lat: parseFloat(vendor.latitude),
-                        lng: parseFloat(vendor.longitude),
-                        specialty: vendor.specialty,
-                        categoryIcon: categoryIcon,
-                        rating: vendor.rating,
-                        location: vendor.location
-                      }]}
+                      markers={[
+                        {
+                          id: vendor.id,
+                          name: vendor.name,
+                          lat: parseFloat(vendor.latitude),
+                          lng: parseFloat(vendor.longitude),
+                          specialty: vendor.specialty,
+                          categoryIcon: categoryIcon,
+                          rating: vendor.rating,
+                          location: vendor.location,
+                        },
+                      ]}
                       onMarkerClick={() => {}}
                       onVendorSelect={() => {}}
                       selectedVendorId={null}
@@ -448,11 +511,14 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                       <Flag className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg text-gray-900 mb-2">Is this your business?</h3>
+                      <h3 className="text-lg text-gray-900 mb-2">
+                        Is this your business?
+                      </h3>
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        Claim this listing to manage your business information, respond to reviews, and connect with customers.
+                        Claim this listing to manage your business information,
+                        respond to reviews, and connect with customers.
                       </p>
-                      
+
                       {/* Benefits */}
                       <div className="space-y-2 mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
                         <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -472,16 +538,19 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                           <span>Add photos & promotions</span>
                         </div>
                       </div>
-                      
-                      <button 
-                        onClick={() => navigate('/sell/')}
+
+                      <button
+                        onClick={() => navigate("/sell/")}
                         className="w-full px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                       >
                         <Shield className="w-5 h-5" />
                         Claim This Listing
                       </button>
                       <p className="text-xs text-gray-500 mt-3 text-center">
-                        Already claimed? <button className="text-sky-600 hover:underline">Sign in</button>
+                        Already claimed?{" "}
+                        <button className="text-sky-600 hover:underline">
+                          Sign in
+                        </button>
                       </p>
                     </div>
                   </div>
@@ -497,13 +566,17 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg text-gray-900">Verified Business</h3>
+                        <h3 className="text-lg text-gray-900">
+                          Verified Business
+                        </h3>
                         <CheckCircle className="w-5 h-5 text-sky-600" />
                       </div>
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        This business has been verified by ShopLocal. The information is accurate and regularly updated by the business owner.
+                        This business has been verified by ShopLocal. The
+                        information is accurate and regularly updated by the
+                        business owner.
                       </p>
-                      
+
                       {/* Trust Indicators */}
                       <div className="space-y-2 mb-4 bg-sky-50 rounded-lg p-3 border border-sky-200">
                         <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -519,9 +592,13 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                           <span>Regularly updated</span>
                         </div>
                       </div>
-                      
-                      <button 
-                        onClick={() => document.querySelector('#contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+
+                      <button
+                        onClick={() =>
+                          document
+                            .querySelector("#contact-form")
+                            ?.scrollIntoView({ behavior: "smooth" })
+                        }
                         className="w-full px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors text-sm"
                       >
                         Contact Business
@@ -545,14 +622,24 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                     <ShoppingBag className="w-6 h-6 text-sky-600" />
                   </div>
                   <div>
-                    <h2 className="text-2xl text-gray-900">Products from {vendor.name}</h2>
-                    <p className="text-sm text-gray-500 mt-1">{vendorProducts.length} {vendorProducts.length === 1 ? 'product' : 'products'} available</p>
+                    <h2 className="text-2xl text-gray-900">
+                      Products from {vendor.name}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {vendorProducts.length}{" "}
+                      {vendorProducts.length === 1 ? "product" : "products"}{" "}
+                      available
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* View Store Button */}
                 <button
-                  onClick={() => navigate(`/vendor/${vendor.slug}/`)}
+                  onClick={() =>
+                    navigate(`/vendor/${vendor.slug}/`, {
+                      state: { vendor },
+                    })
+                  }
                   className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
                 >
                   <Package className="w-4 h-4" />
@@ -576,7 +663,11 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
               {vendorProducts.length > 4 && (
                 <div className="mt-8 pt-6 border-t border-gray-200 text-center">
                   <button
-                    onClick={() => navigate(`/vendor/${vendor.slug}/`)}
+                    onClick={() =>
+                      navigate(`/vendor/${vendor.slug}/`, {
+                        state: { vendor },
+                      })
+                    }
                     className="inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 transition-colors"
                   >
                     <span>View all {vendorProducts.length} products</span>
