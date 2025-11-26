@@ -12,7 +12,7 @@
  * @module Navigation
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
@@ -50,7 +50,7 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
-
+const [cartCount, setCartCount] = useState(0);
   /**
    * Main navigation links configuration
    * Each link includes:
@@ -67,6 +67,28 @@ export function Navigation() {
     { label: "Help", path: "/help", hasDropdown: true },
     { label: "About", path: "/about", hasDropdown: false },
   ];
+
+    const updateCartCount = () => {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const itemCount = cart.length; // number of distinct products
+  setCartCount(itemCount);
+};
+// Initialize and keep cart count updated
+useEffect(() => {
+  updateCartCount(); // initial count
+
+  // Optional: update if localStorage changes in another tab
+  const handleStorageChange = () => updateCartCount();
+  window.addEventListener('storage', handleStorageChange);
+
+  // Poll every second
+  const interval = setInterval(updateCartCount, 1000);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('storage', handleStorageChange);
+  };
+}, []);
 
   return (
     <nav className="sticky top-0 z-50">
@@ -118,7 +140,7 @@ export function Navigation() {
                 <ShoppingCart className="w-5 h-5" />
                 {/* Cart Item Count Badge */}
                 <span className="absolute -top-1 -right-1 bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                  3
+                  {cartCount}
                 </span>
                 <span className="text-xs">Checkout</span>
               </button>
@@ -288,7 +310,7 @@ export function Navigation() {
                 <ShoppingCart className="w-5 h-5" />
                 {/* Cart Item Count Badge */}
                 <span className="absolute top-1 right-1 bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                  3
+                  {cartCount}
                 </span>
                 <span className="text-xs">Checkout</span>
               </button>
