@@ -11,6 +11,7 @@
  * @module App
  */
 
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -21,6 +22,8 @@ import {
 } from "react-router-dom";
 import { Navigation } from "./components/Navigation";
 import { Footer } from "./components/Footer";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Homepage } from "./pages/Homepage";
 import VendorsDirectory from "./pages/VendorsDirectory";
 import { VendorStorefront } from "./pages/VendorStorefront";
@@ -46,7 +49,13 @@ import { SearchResults } from "./pages/SearchResults";
 import { DealsPromotions } from "./pages/DealsPromotions";
 import { ClaimListing } from "./pages/ClaimListing";
 import { CreateListing } from "./pages/CreateListing";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import UserDashboard from "./pages/UserDashboard";
+import GoogleCallback from "./pages/GoogleCallback";
+import AppleCallback from "./pages/AppleCallback";
 import { vendors } from "./lib/mockData";
+import { Store } from "lucide-react";
 
 /**
  * AppContent Component
@@ -93,8 +102,22 @@ function AppContent() {
               For new sellers to sign up and claim listings
               ============================================ */}
           <Route path="/sell" element={<BecomeSeller />} />
-          <Route path="/claim-listing" element={<ClaimListing />} />
-          <Route path="/create-listing" element={<CreateListing />} />
+          <Route
+            path="/claim-listing"
+            element={
+              <ProtectedRoute>
+                <ClaimListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-listing"
+            element={
+              <ProtectedRoute>
+                <CreateListing />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ============================================
               INFORMATIONAL PAGES
@@ -141,8 +164,32 @@ function AppContent() {
               VENDOR DASHBOARD ROUTES
               Vendor management and authentication
               ============================================ */}
-          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route
+            path="/vendor-dashboard"
+            element={
+              <ProtectedRoute requiredRole="vendor">
+                <VendorDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/vendor-login" element={<VendorLoginPage />} />
+
+          {/* ============================================
+              USER AUTHENTICATION ROUTES
+              Login, register, and user dashboard
+              ============================================ */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/google/callback" element={<GoogleCallback />} />
+          <Route path="/auth/apple/callback" element={<AppleCallback />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ============================================
               404 NOT FOUND
@@ -170,6 +217,7 @@ function AppContent() {
 function VendorDetailWrapper() {
   const { slug } = useParams();
   const { state } = useLocation();
+  const navigate = useNavigate();
 
   // First check if vendor was passed via navigation state (from API)
   let vendor = state?.vendor;
@@ -180,8 +228,28 @@ function VendorDetailWrapper() {
   }
 
   // Redirect to directory if vendor doesn't exist
+  useEffect(() => {
+    if (!vendor) {
+      console.warn(
+        `⚠️ Vendor not found for slug: ${slug}, redirecting to directory`
+      );
+      navigate("/vendors", { replace: true });
+    }
+  }, [vendor, slug, navigate]);
+
+  // Show loading while redirecting
   if (!vendor) {
-    return <VendorsDirectory />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Store className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-xl text-gray-900 mb-2">Vendor not found</h3>
+          <p className="text-gray-600">Redirecting to directory...</p>
+        </div>
+      </div>
+    );
   }
 
   return <VendorDetail vendor={vendor} />;
@@ -199,8 +267,14 @@ function VendorStorefrontWrapper() {
   const { slug } = useParams();
   const { state } = useLocation();
 
-  // Pass vendor data if available
-  return <VendorStorefront vendorSlug={slug || ""} vendor={state?.vendor} />;
+  // Pass vendor data if available, use key to force re-mount on slug change
+  return (
+    <VendorStorefront
+      key={slug}
+      vendorSlug={slug || ""}
+      vendor={state?.vendor}
+    />
+  );
 }
 
 /**
@@ -225,10 +299,15 @@ function ProductDetailWrapper() {
  */
 export default function App() {
   // Use basename only on GitHub Pages (check if URL includes github.io)
+  const basename = window.location.hostname.includes("github.io")
+    ? "/Shoplocal"
+    : "/";
 
   return (
-    <BrowserRouter>
-      <AppContent />
+    <BrowserRouter basename={basename}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

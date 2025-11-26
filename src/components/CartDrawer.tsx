@@ -1,20 +1,31 @@
-import { useState,useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
-import { products } from '../lib/mockData';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  ArrowRight,
+  Tag,
+  X,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "./ui/sheet";
+import { products } from "../lib/mockData";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  vendor: string;
-  image: string;
+  product: (typeof products)[0];
   quantity: number;
 }
+
 interface CartDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,50 +33,42 @@ interface CartDrawerProps {
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [promoCode, setPromoCode] = useState('');
+  const [cartItems, setCartItems] = useState<CartItem[]>([
+    { product: products[0], quantity: 2 },
+    { product: products[1], quantity: 1 },
+    { product: products[2], quantity: 3 },
+  ]);
+  const [promoCode, setPromoCode] = useState("");
 
-const updateQuantity = (index: number, newQuantity: number) => {
-  if (newQuantity < 1) return;
+  const updateQuantity = (index: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    const newCart = [...cartItems];
+    newCart[index].quantity = newQuantity;
+    setCartItems(newCart);
+  };
 
-  setCartItems(prev => {
-    const updated = [...prev];
-    updated[index].quantity = newQuantity;
-    return updated;
-  });
-};
+  const removeItem = (index: number) => {
+    setCartItems(cartItems.filter((_, i) => i !== index));
+  };
 
-const removeItem = (index: number) => {
-  setCartItems(prev => prev.filter((_, i) => i !== index));
-};
-
-const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0
+  );
   const shipping = subtotal > 500 ? 0 : 25;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
   const handleCheckout = () => {
     onOpenChange(false);
-    navigate('/checkout/');
+    navigate("/checkout/");
   };
 
   const handleContinueShopping = () => {
     onOpenChange(false);
-    navigate('/products/');
+    navigate("/products/");
   };
 
-useEffect(() => {
-  if (open) {
-    const stored = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartItems(stored);
-  }
-}, [open]);
-
-useEffect(() => {
-  if (open) {
-    localStorage.setItem("cart", JSON.stringify(cartItems));
-  }
-}, [cartItems, open]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
@@ -101,7 +104,10 @@ useEffect(() => {
             {/* Scrollable Cart Items */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               {cartItems.map((item, index) => (
-                <div key={index} className="bg-white rounded-xl p-4 border border-gray-100">
+                <div
+                  key={index}
+                  className="bg-white rounded-xl p-4 border border-gray-100"
+                >
                   <div className="flex gap-4">
                     {/* Image */}
                     <button
@@ -111,11 +117,11 @@ useEffect(() => {
                       }}
                       className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0"
                     >
-                    <ImageWithFallback
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                      <ImageWithFallback
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                      />
                     </button>
 
                     {/* Details */}
@@ -129,7 +135,7 @@ useEffect(() => {
                             }}
                             className="text-sm text-gray-900 hover:text-[#0EA5E9] text-left line-clamp-2"
                           >
-                            {item.name}
+                            {item.product.name}
                           </button>
                           <button
                             onClick={() => {
@@ -138,7 +144,7 @@ useEffect(() => {
                             }}
                             className="text-xs text-gray-600 hover:text-[#0EA5E9] block mt-1"
                           >
-                            {item.vendor}
+                            {item.product.vendor}
                           </button>
                         </div>
                         <button
@@ -153,7 +159,9 @@ useEffect(() => {
                         {/* Quantity */}
                         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                           <button
-                            onClick={() => updateQuantity(index, item.quantity - 1)}
+                            onClick={() =>
+                              updateQuantity(index, item.quantity - 1)
+                            }
                             className="px-2 py-1 hover:bg-gray-50"
                           >
                             <Minus className="w-3 h-3" />
@@ -162,7 +170,9 @@ useEffect(() => {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(index, item.quantity + 1)}
+                            onClick={() =>
+                              updateQuantity(index, item.quantity + 1)
+                            }
                             className="px-2 py-1 hover:bg-gray-50"
                           >
                             <Plus className="w-3 h-3" />
@@ -172,7 +182,7 @@ useEffect(() => {
                         {/* Price */}
                         <div className="text-right">
                           <p className="text-sm text-gray-900">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            ${(item.product.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -186,7 +196,9 @@ useEffect(() => {
             <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
               {/* Promo Code */}
               <div className="mb-4">
-                <label className="block text-xs text-gray-700 mb-2">Promo Code</label>
+                <label className="block text-xs text-gray-700 mb-2">
+                  Promo Code
+                </label>
                 <div className="flex gap-2">
                   <Input
                     type="text"
@@ -209,7 +221,9 @@ useEffect(() => {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  <span>
+                    {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Tax (8%)</span>
