@@ -9,30 +9,15 @@
 export const config = {
   // API Endpoints
   api: {
-    geodir: "https://shoplocal.kinsta.cloud/wp-json/geodir/v2",
-    wordpress: "https://shoplocal.kinsta.cloud/wp-json/wp/v2",
-    dokan: "https://shoplocal.kinsta.cloud/wp-json/dokan/v1",
-    jwtAuth: "https://shoplocal.kinsta.cloud/wp-json/jwt-auth/v1",
-    customApi: "https://shoplocal.kinsta.cloud/wp-json/custom-api/v1",
+    geodir: 'https://wpgeodirectory.com/wp-json/geodir/v2',
+    wordpress: 'https://your-site.com/wp-json/wp/v2',
+    dokan: 'https://your-site.com/wp-json/dokan/v1',
   },
 
   // Authentication
   auth: {
-    token: "",
-    type: "Bearer", // Changed from 'Basic' to 'Bearer' for JWT
-    username: "michael", // WordPress admin username
-    appPassword: "SVYOIzqhxtBwV4cIUZwQ0w8c", // WordPress Application Password
-    // Pre-encoded Base64 credentials for WordPress Application Password
-    // Format: base64(username:appPassword)
-    // This is used for ALL API requests (creating/updating listings)
-    // Even though users have their own accounts, we use admin credentials for GeoDirectory API
-    basicAuth: "bWljaGFlbDpTVllPSXpxaHh0QndWNGNJVVp3UTB3OGM=",
-    endpoints: {
-      login: "/jwt-auth/v1/token",
-      register: "/wp/v2/users",
-      validate: "/jwt-auth/v1/token/validate",
-      refresh: "/jwt-auth/v1/token/refresh",
-    },
+    token: '',
+    type: 'Basic',
   },
 
   // Feature flags
@@ -48,7 +33,7 @@ export const config = {
   // Caching settings
   cache: {
     ttl: 10 * 60 * 1000, // 10 minutes in milliseconds
-    storageKey: "shoplocal_cache",
+    storageKey: 'shoplocal_cache',
     enabled: true,
   },
 
@@ -71,55 +56,52 @@ export const config = {
     defaultCenter: [39.8283, -98.5795] as [number, number], // Center of USA
     defaultZoom: 4,
     markerZoom: 13,
-    tileLayer: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
 
   // Brand colors
   colors: {
-    primary: "#0EA5E9", // Sky blue
-    black: "#000000",
-    white: "#FFFFFF",
+    primary: '#0EA5E9', // Sky blue
+    black: '#000000',
+    white: '#FFFFFF',
   },
 
   // UI settings
   ui: {
-    buttonBorderRadius: "6px",
-    containerMaxWidth: "1280px", // max-w-7xl
+    buttonBorderRadius: '6px',
+    containerMaxWidth: '1280px', // max-w-7xl
     animationDuration: 200,
   },
 
   // Typography
   typography: {
-    fontFamily: "Helvetica Neue, Helvetica, Arial, sans-serif",
+    fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
     tracking: {
-      tight: "-0.025em",
-      wide: "0.025em",
-      normal: "0",
+      tight: '-0.025em',
+      wide: '0.025em',
+      normal: '0',
     },
   },
 
   // External APIs
   external: {
-    nominatim: "https://nominatim.openstreetmap.org",
-    unsplash: "https://source.unsplash.com",
+    nominatim: 'https://nominatim.openstreetmap.org',
+    unsplash: 'https://source.unsplash.com',
   },
 
   // App metadata
   app: {
-    name: "ShopLocal",
-    description:
-      "Comprehensive marketplace for independent sellers and wholesale offerings",
-    tagline: "Shop Premium Brands Locally",
+    name: 'ShopLocal',
+    description: 'Comprehensive marketplace for independent sellers and wholesale offerings',
+    tagline: 'Shop Premium Brands Locally',
   },
 
   // SEO settings
   seo: {
-    titleTemplate: "%s | ShopLocal",
-    defaultTitle: "ShopLocal - Your Local Marketplace",
-    defaultDescription:
-      "Discover premium brands and local sellers in your community",
+    titleTemplate: '%s | ShopLocal',
+    defaultTitle: 'ShopLocal - Your Local Marketplace',
+    defaultDescription: 'Discover premium brands and local sellers in your community',
   },
 
   // Vendor directory settings
@@ -135,19 +117,10 @@ export const config = {
  * Get the authorization header for API requests
  */
 export const getAuthHeader = (): string => {
-  // Check localStorage for authentication tokens
-  const token = localStorage.getItem("authToken");
-  const wpCredentials = localStorage.getItem("wpCredentials");
-
-  if (wpCredentials) {
-    return `Basic ${wpCredentials}`;
-  } else if (token) {
-    return `Bearer ${token}`;
-  } else if (config.auth.token) {
-    return `Bearer ${config.auth.token}`;
+  if (config.auth.token) {
+    return `Basic ${config.auth.token}`;
   }
-
-  return "";
+  return '';
 };
 
 /**
@@ -159,31 +132,27 @@ export const buildApiUrl = (
   params?: Record<string, string | number | boolean>
 ): string => {
   const url = new URL(`${baseUrl}${endpoint}`);
-
+  
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, String(value));
     });
   }
-
+  
   return url.toString();
 };
 
 /**
  * Check if a feature is enabled
  */
-export const isFeatureEnabled = (
-  feature: keyof typeof config.features
-): boolean => {
+export const isFeatureEnabled = (feature: keyof typeof config.features): boolean => {
   return config.features[feature];
 };
 
 /**
  * Get API endpoint URL
  */
-export const getApiUrl = (
-  service: "geodir" | "wordpress" | "dokan"
-): string => {
+export const getApiUrl = (service: 'geodir' | 'wordpress' | 'dokan'): string => {
   return config.api[service];
 };
 
