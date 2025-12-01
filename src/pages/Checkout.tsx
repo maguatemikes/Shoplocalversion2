@@ -8,6 +8,8 @@ import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { getShippingMethods } from "../api/woo/checkout";
+import axios from 'axios';
 
 interface CartItem {
   id: number;
@@ -23,19 +25,97 @@ export function Checkout() {
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-
+  const [shippingMethods, setShipping] = useState([]);
+  const selected = shippingMethods.find(m => m.id === shippingMethod);
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = shippingMethod === 'standard' ? 25 : shippingMethod === 'express' ? 45 : 0;
+  const shipping = selected? selected.cost : 0;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
+  const [countries,setCountries] = useState([]);
+   const [states,setStates] = useState([]);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "",
+  });
 
   useEffect(() => {
-   
-      const stored = JSON.parse(localStorage.getItem("cart") || "[]");
-      setCartItems(stored);
-    }
-  );
+  const stored = JSON.parse(localStorage.getItem("cart") || "[]");
+  setCartItems(stored);
+  fetchCountries();
+}, []); // <-- empty array ensures this runs only once, on mount
+
   
+      const fetchCountries = async () => {
+      try {
+        const response = await axios.get(
+          "https://api.countrystatecity.in/v1/countries",
+          {
+            headers: {
+              "X-CSCAPI-KEY": "Q21EZTFjYUFVNkdiN0NxYkpIVEZIWlV6eVhBdW92RlVlM2JtUWRHYg==",
+            },
+          }
+        );
+        setCountries(response.data);
+        console.log(response.data);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+      }
+    };
+const handleCountryChange = (e) => {
+  const countryCode = e.target.value;
+  setForm({ ...form, country: countryCode, state: "", city: "" });
+  fetch(`https://api.countrystatecity.in/v1/countries/${countryCode}/states`, {
+    headers: { "X-CSCAPI-KEY": 'Q21EZTFjYUFVNkdiN0NxYkpIVEZIWlV6eVhBdW92RlVlM2JtUWRHYg==' }
+  })
+    .then(res => res.json())
+    .then(data => setStates(data));
+};
+
+  
+const handleChange = (e) => {
+  const { id, value } = e.target;
+
+  // Update the form state first
+  setForm((prev) => {
+    const updatedForm = { ...prev, [id]: value };
+
+    // Run fetchShipping only if city, state, zip, and country are filled
+    const { city, state, zip, country } = updatedForm;
+    if (city && state && zip && country) {
+      fetchShipping(updatedForm); // Pass the updated form if needed
+    }
+
+    return updatedForm;
+  });
+};
+ 
+  const fetchShipping = async () => {
+    const payload = {
+      country:form.country,
+      state:form.state,
+      city: "Cebu",
+      postcode: "6001",
+      items: cartItems.map(item => ({
+        product_id: item.id,
+        qty: item.quantity,
+      })),
+    };
+
+    try {
+      const data = await getShippingMethods(payload);
+      setShipping(data);
+    } catch (err) {
+      console.error("Error loading shipping:", err);
+    }
+  };
+ 
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,6 +127,7 @@ export function Checkout() {
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Lock className="w-4 h-4" />
               <span>Secure Checkout</span>
+             
             </div>
           </div>
         </div>
@@ -92,41 +173,101 @@ export function Checkout() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" placeholder="John" className="mt-1 rounded-lg" />
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        className="mt-1 rounded-lg"
+                        value={form.firstName}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" placeholder="Doe" className="mt-1 rounded-lg" />
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        className="mt-1 rounded-lg"
+                        value={form.lastName}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div className="md:col-span-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="john@example.com" className="mt-1 rounded-lg" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="john@example.com"
+                        className="mt-1 rounded-lg"
+                        value={form.email}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div className="md:col-span-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" placeholder="(555) 123-4567" className="mt-1 rounded-lg" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="(555) 123-4567"
+                        className="mt-1 rounded-lg"
+                        value={form.phone}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div className="md:col-span-2">
                       <Label htmlFor="address">Street Address</Label>
-                      <Input id="address" placeholder="123 Main St" className="mt-1 rounded-lg" />
+                      <Input
+                        id="address"
+                        placeholder="123 Main St"
+                        className="mt-1 rounded-lg"
+                        value={form.address}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div>
                       <Label htmlFor="city">City</Label>
-                      <Input id="city" placeholder="San Francisco" className="mt-1 rounded-lg" />
+                      <Input
+                        id="city"
+                        placeholder="San Francisco"
+                        className="mt-1 rounded-lg"
+                        value={form.city}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div>
                       <Label htmlFor="state">State</Label>
-                      <Input id="state" placeholder="CA" className="mt-1 rounded-lg" />
+                  <select id="state" onChange={handleChange} className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 border px-3 py-1 text-base bg-input-background transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive mt-1 rounded-lg" value={form.state}>
+                    <option value="">Select state</option>
+                    {states.map(s => <option key={s.iso2} value={s.iso2}>{s.name}</option>)}
+                  </select>
                     </div>
+
                     <div>
                       <Label htmlFor="zip">ZIP Code</Label>
-                      <Input id="zip" placeholder="94102" className="mt-1 rounded-lg" />
+                      <Input
+                        id="zip"
+                        placeholder="94102"
+                        className="mt-1 rounded-lg"
+                        value={form.zip}
+                        onChange={handleChange}
+                      />
                     </div>
+
                     <div>
                       <Label htmlFor="country">Country</Label>
-                      <Input id="country" placeholder="United States" className="mt-1 rounded-lg" />
+                     <select id="country" onChange={handleCountryChange}   className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 border px-3 py-1 text-base bg-input-background transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive mt-1 rounded-lg" value={form.country}>
+                      <option value="">Select country</option>
+                      {countries.map(c => <option key={c.iso2} value={c.iso2}>{c.name}</option>)}
+                    </select>
+
                     </div>
                   </div>
                 </div>
@@ -139,41 +280,28 @@ export function Checkout() {
                   </div>
 
                   <RadioGroup value={shippingMethod} onValueChange={setShippingMethod}>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl hover:border-blue-600 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <RadioGroupItem value="standard" id="standard" />
-                          <Label htmlFor="standard" className="cursor-pointer">
-                            <p className="text-gray-900">Standard Shipping</p>
-                            <p className="text-sm text-gray-600">5-7 business days</p>
-                          </Label>
-                        </div>
-                        <span className="text-gray-900">$25.00</span>
-                      </div>
+                  <div className="space-y-3">
 
-                      <div className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl hover:border-blue-600 cursor-pointer">
+                    {shippingMethods.map((method) => (
+                      <div
+                        key={method.id}
+                        className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl hover:border-blue-600 cursor-pointer"
+                      >
                         <div className="flex items-center gap-3">
-                          <RadioGroupItem value="express" id="express" />
-                          <Label htmlFor="express" className="cursor-pointer">
-                            <p className="text-gray-900">Express Shipping</p>
-                            <p className="text-sm text-gray-600">2-3 business days</p>
+                          <RadioGroupItem value={method.id} id={method.id} />
+                          <Label htmlFor={method.id} className="cursor-pointer">
+                            <p className="text-gray-900">{method.title}</p>
+                            <p className="text-sm text-gray-600">${method.cost} shipping fee</p>
                           </Label>
                         </div>
-                        <span className="text-gray-900">$45.00</span>
-                      </div>
 
-                      <div className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl hover:border-blue-600 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <RadioGroupItem value="free" id="free" />
-                          <Label htmlFor="free" className="cursor-pointer">
-                            <p className="text-gray-900">Free Shipping</p>
-                            <p className="text-sm text-gray-600">7-10 business days</p>
-                          </Label>
-                        </div>
-                        <span className="text-green-600">FREE</span>
+                        <span className="text-gray-900">${method.total}</span>
                       </div>
-                    </div>
-                  </RadioGroup>
+                    ))}
+
+                  </div>
+                </RadioGroup>
+
                 </div>
 
                 <Button

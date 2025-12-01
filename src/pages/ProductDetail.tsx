@@ -10,6 +10,7 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { getProductDetail,getNearbyVendors, getShortProductDetail  } from '../api/woo/products';
 import AddToCartModal from "../components/AddtoCartModal";
 import VariationSelector from '../components/VariationSelector';
+import Loading from '../components/Loading';
 interface ProductDetailProps {
   productSlug: string;
 }
@@ -72,7 +73,7 @@ export function ProductDetail({ productSlug }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [xtraData, setXtraData] = useState({});
-  const [loading,setLoading] = useState(false);
+  const [loading,setLoading] = useState(true);
   const [error,setError] = useState(false);
 
 const [showModal, setShowModal] = useState(false);
@@ -151,6 +152,7 @@ const matched = product_item.variations.find(v =>
   if (matched) {
     setProduct(prev => ({
       ...prev,
+      id:matched.id,
       price: parseFloat(matched.price),
       originalPrice: parseFloat(matched.regularPrice),
       image: matched.image || prev.image,
@@ -164,6 +166,7 @@ const matched = product_item.variations.find(v =>
 
 // 1️⃣ Fetch product detail on product ID change
 useEffect(() => {
+  
   let isMounted = true;
 
   const fetchProductDetail = async () => {
@@ -182,7 +185,7 @@ useEffect(() => {
 
     try {
       const shortDetail = await getShortProductDetail(slug);
-      if (isMounted) setProducItem(shortDetail),setProduct(shortDetail)
+      if (isMounted) setProducItem(shortDetail),setProduct(shortDetail),setLoading(false)
     } catch (err) {
       console.error("Failed to fetch product details:", err);
     }
@@ -200,7 +203,7 @@ useEffect(() => {
 useEffect(() => {
   if (!navigator.geolocation) {
     setError("Geolocation not supported");
-    setLoading(false);
+    
     return;
   }
 
@@ -213,7 +216,7 @@ useEffect(() => {
     },
     (err) => {
       setError("Unable to retrieve your location");
-      setLoading(false);
+     
     }
   );
 }, []);
@@ -230,7 +233,7 @@ useEffect(() => {
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+     
     }
   };
 
@@ -275,7 +278,7 @@ const handleAddToCart = () => {
     // Add new product
     cart.push({
       id: product.id,
-      name: product.name,
+      name: xtraData.name,
       image: product.image,
       price: product.price,
       quantity: quantity,
@@ -287,7 +290,7 @@ const handleAddToCart = () => {
 
   // Show popup modal
   setLastAddedProduct({
-    name: product.name,
+    name: xtraData.name,
     image: product.image,
   });
 
@@ -297,6 +300,11 @@ const handleAddToCart = () => {
   setTimeout(() => setShowModal(false), 2000);
 };
 
+
+    if (loading) {
+      return <Loading message="Fetching Product..." />;
+   
+  }
 
   return (
     <><div className="min-h-screen bg-white">
@@ -399,14 +407,14 @@ const handleAddToCart = () => {
             {/* Price */}
             <div className="mb-8">
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-4xl text-gray-900">${product_item.price.toFixed(2)}</span>
-                {product_item.originalPrice && product_item.originalPrice > 0 && product_item.originalPrice > product_item.price && (
+                <span className="text-4xl text-gray-900">${product.price.toFixed(2)}</span>
+                {product.originalPrice && product.originalPrice > 0 && product.originalPrice > product.price && (
                   <>
                     <span className="text-xl text-gray-500 line-through">
-                      ${product_item.originalPrice.toFixed(2)}
+                      ${product.originalPrice.toFixed(2)}
                     </span>
                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                      Save {Math.round(((product_item.originalPrice - product_item.price) / product_item.originalPrice) * 100)}%
+                      Save {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
                     </Badge>
                   </>
                 )}
@@ -415,15 +423,18 @@ const handleAddToCart = () => {
             </div>
 
             {/* Stock Status */}
-            {product_item.stock > 0 ?
+            {product.stock > 0 ?
               <div className="flex items-center gap-2 mb-8 text-green-600">
                 <CheckCircle className="w-5 h-5" />
                 <span>In Stock - Ready to Ship</span>
-              </div> : null}
-
+              </div> :<div className="flex items-center gap-2 mb-8 text-red-600">
+                <CheckCircle className="w-5 h-5" />
+                <span>Out of stock</span>
+              </div>}
+              
               {/* Attribute */}
 
-                  <div className="mb-8">
+                  {product_item.attributes.length ? <div className="mb-8">
                     <h2>Choose Options</h2>
                     <VariationSelector
                       attributes={product_item.attributes}
@@ -431,7 +442,7 @@ const handleAddToCart = () => {
                       onChange={handleVariationChange}
                     />
 
-                  </div>
+                  </div> : null }
 
             {/* Quantity */}
             <div className="mb-8">
@@ -456,7 +467,7 @@ const handleAddToCart = () => {
                     +
                   </button>
                 </div>
-                <span className="text-gray-600">Available: {product_item.stock} units</span>
+                <span className="text-gray-600">Available: {product.stock} units</span>
               </div>
             </div>
 
@@ -467,6 +478,7 @@ const handleAddToCart = () => {
               <Button
                 size="lg"
                 className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl"
+                disabled={product.stock == 0}
                 onClick={handleAddToCart}
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
