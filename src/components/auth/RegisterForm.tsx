@@ -62,7 +62,7 @@ export function RegisterForm() {
         formData.password,
         formData.displayName
       );
-      navigate("/create-listing");
+      navigate("/sell");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
