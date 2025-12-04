@@ -82,8 +82,8 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
     fetchCategoryIcon();
   }, [vendor.categoryId]);
 
-  // Check if this is a claimed listing (mock logic)
-  const isClaimed = vendor.rating >= 4.5; // In real app, this would be a property
+  // Check if this is a claimed listing (using real claimed field from API)
+  const isClaimed = vendor.claimed === 1; // 0 = unclaimed, 1 = claimed
 
   // Get vendor products
   const vendorProducts = products.filter((p) => p.vendorSlug === vendor.slug);
@@ -540,7 +540,22 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
                       </div>
 
                       <button
-                        onClick={() => navigate("/sell/")}
+                        onClick={() =>
+                          navigate("/sell/", {
+                            state: {
+                              claimListing: {
+                                id: vendor.id,
+                                name: vendor.name,
+                                address: vendor.address,
+                                city: vendor.city,
+                                state: vendor.state,
+                                zip: vendor.zip,
+                                category: vendor.specialty,
+                                image: vendor.image,
+                              },
+                            },
+                          })
+                        }
                         className="w-full px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                       >
                         <Shield className="w-5 h-5" />
