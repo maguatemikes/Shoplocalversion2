@@ -26,12 +26,7 @@ export const config = {
     // Format: base64(username:appPassword)
     // This is used for ALL API requests (creating/updating listings)
     // Even though users have their own accounts, we use admin credentials for GeoDirectory API
-    // ⚠️ IMPORTANT: This will be regenerated dynamically below to ensure correct encoding
-    get basicAuth() {
-      // Generate fresh Base64 encoding to avoid encoding issues
-      const credentials = `${this.username}:${this.appPassword}`;
-      return btoa(credentials);
-    },
+    basicAuth: "bWljaGFlbDpTVllPSXpxaHh0QndWNGNJVVp3UTB3OGM=",
     endpoints: {
       login: "/jwt-auth/v1/token",
       register: "/wp/v2/users",

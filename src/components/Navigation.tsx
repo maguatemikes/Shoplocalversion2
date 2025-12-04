@@ -50,7 +50,7 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
-  const [cartCount, setCartCount] = useState(0);
+const [cartCount, setCartCount] = useState(0);
   /**
    * Main navigation links configuration
    * Each link includes:
@@ -68,27 +68,27 @@ export function Navigation() {
     { label: "About", path: "/about", hasDropdown: false },
   ];
 
-  const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const itemCount = cart.length; // number of distinct products
-    setCartCount(itemCount);
+    const updateCartCount = () => {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const itemCount = cart.length; // number of distinct products
+  setCartCount(itemCount);
+};
+// Initialize and keep cart count updated
+useEffect(() => {
+  updateCartCount(); // initial count
+
+  // Optional: update if localStorage changes in another tab
+  const handleStorageChange = () => updateCartCount();
+  window.addEventListener('storage', handleStorageChange);
+
+  // Poll every second
+  const interval = setInterval(updateCartCount, 1000);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('storage', handleStorageChange);
   };
-  // Initialize and keep cart count updated
-  useEffect(() => {
-    updateCartCount(); // initial count
-
-    // Optional: update if localStorage changes in another tab
-    const handleStorageChange = () => updateCartCount();
-    window.addEventListener("storage", handleStorageChange);
-
-    // Poll every second
-    const interval = setInterval(updateCartCount, 1000);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
+}, []);
 
   return (
     <nav className="sticky top-0 z-50">

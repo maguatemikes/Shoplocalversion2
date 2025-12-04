@@ -94,9 +94,6 @@ export function CreateListing() {
   const [featuredImagePreview, setFeaturedImagePreview] = useState<
     string | null
   >(null);
-  const [featuredImageBase64, setFeaturedImageBase64] = useState<string | null>(
-    null
-  );
   const [categories, setCategories] = useState<
     Array<{ id: number; name: string; slug: string }>
   >([]);
@@ -159,7 +156,6 @@ export function CreateListing() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setFeaturedImagePreview(reader.result as string);
-        setFeaturedImageBase64(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -287,96 +283,10 @@ export function CreateListing() {
     });
     setFeaturedImage(null);
     setFeaturedImagePreview(null);
-    setFeaturedImageBase64(null);
     setCurrentStep(1);
     setValidationErrors({});
     setSubmitStatus("idle");
     setErrorMessage("");
-  };
-
-  // Upload image to WordPress Media Library
-  const uploadImageToWordPress = async (file: File): Promise<number | null> => {
-    try {
-      console.log("📤 Uploading image to WordPress Media Library...");
-      console.log("📁 File:", file.name, file.type, file.size);
-
-      // ⚠️ IMPORTANT: Always use ADMIN credentials for media uploads
-      // Regular users don't have WordPress Application Passwords
-      // Only admin has the app password configured
-      const authHeader = `Basic ${config.auth.basicAuth}`;
-      console.log("🔑 Using ADMIN application password for media upload");
-      console.log("👤 Admin user:", config.auth.username);
-
-      // Create FormData for WordPress media upload
-      const mediaFormData = new FormData();
-      mediaFormData.append("file", file);
-
-      // Set the media author to the current user (if logged in)
-      if (user?.id) {
-        mediaFormData.append("author", user.id.toString());
-        console.log("👤 Setting media author to user ID:", user.id);
-      }
-
-      const uploadUrl = `${config.apiBaseUrl}/wp-json/wp/v2/media`;
-      console.log("🌐 Upload URL:", uploadUrl);
-
-      // Upload to WordPress Media Library
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          // Don't set Content-Type - browser will set it with boundary
-        },
-        body: mediaFormData,
-      });
-
-      console.log("📊 Response status:", response.status, response.statusText);
-
-      // Read response as text first to see what we got
-      const responseText = await response.text();
-      console.log(
-        "📄 Response (first 500 chars):",
-        responseText.substring(0, 500)
-      );
-
-      if (!response.ok) {
-        // Try to parse as JSON if possible
-        let errorData;
-        try {
-          errorData = JSON.parse(responseText);
-          console.error("❌ Media upload failed (JSON error):", errorData);
-          toast.error(errorData.message || `Upload failed: ${response.status}`);
-        } catch {
-          console.error(
-            "❌ Media upload failed (HTML/Text error):",
-            responseText.substring(0, 200)
-          );
-
-          // Check for specific error types
-          if (response.status === 401) {
-            toast.error("Authentication failed. Please log in again.");
-          } else if (response.status === 403) {
-            toast.error("You do not have permission to upload files.");
-          } else {
-            toast.error(
-              `Upload failed: ${response.status} ${response.statusText}`
-            );
-          }
-        }
-        return null;
-      }
-
-      // Parse the successful response
-      const mediaData = JSON.parse(responseText);
-      console.log("✅ Image uploaded successfully! Media ID:", mediaData.id);
-      console.log("🖼️ Image URL:", mediaData.source_url);
-
-      return mediaData.id; // Return the media ID
-    } catch (error) {
-      console.error("❌ Error uploading image:", error);
-      toast.error("Failed to upload image. Please try again.");
-      return null;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -388,162 +298,175 @@ export function CreateListing() {
     toast.info("Creating your listing...");
 
     try {
-      // Validate user is logged in
-      if (!user?.id) {
-        toast.error("You must be logged in to create a listing");
-        throw new Error("User not authenticated");
-      }
+      // TEST MODE: Using hardcoded auth header for testing
+      const authHeader = `Basic ${config.auth.basicAuth}`;
 
-      // Use user's auth credentials or fallback to admin credentials
-      const authHeader = user?.token
-        ? `Basic ${user.token}`
-        : `Basic ${config.auth.basicAuth}`;
-
-      // ⭐ STEP 1: Upload featured image FIRST (if provided)
-      let featuredMediaId: number | null = null;
-      if (featuredImage) {
-        toast.info("Uploading image...");
-        featuredMediaId = await uploadImageToWordPress(featuredImage);
-
-        if (!featuredMediaId) {
-          toast.warning(
-            "Image upload failed, but continuing with listing creation..."
-          );
-        } else {
-          toast.success("Image uploaded successfully!");
-        }
-      }
-
-      // ⭐ STEP 2: Create GeoDirectory listing with image reference
-      toast.info("Creating listing...");
-
-      // Prepare GeoDirectory listing data using FormData
-      const geoFormData = new FormData();
-
-      // Required fields
-      geoFormData.append("title", formData.title);
-      geoFormData.append("content", formData.content);
-      geoFormData.append("street", formData.street);
-      geoFormData.append("country", formData.country);
-      geoFormData.append("region", formData.region);
-      geoFormData.append("city", formData.city);
-      geoFormData.append("zip", formData.zip);
-      geoFormData.append("phone", formData.phone);
-      geoFormData.append("email", formData.email);
-      geoFormData.append("status", "pending");
-      geoFormData.append("author", user.id.toString());
-
-      // ⭐ ALTERNATIVE: Try uploading image file directly in FormData
-      if (featuredImage && !featuredMediaId) {
-        console.log("🖼️ Attempting to upload image directly with listing...");
-        geoFormData.append("post_images[]", featuredImage, featuredImage.name);
-        console.log("✅ Added image file to FormData:", featuredImage.name);
-      }
-
-      // ⭐⭐⭐ Add featured media ID and post_images (GeoDirectory image fields)
-      if (featuredMediaId) {
-        console.log("🖼️ Attempting to attach image to listing...");
-        console.log("🖼️ Media ID from upload:", featuredMediaId);
-        console.log("🖼️ Media ID type:", typeof featuredMediaId);
-
-        // Set featured_media (WordPress standard)
-        geoFormData.append("featured_media", featuredMediaId.toString());
-        console.log("✅ Set featured_media field:", featuredMediaId.toString());
-
-        // Set post_images (GeoDirectory image gallery field - accepts "any" type)
-        // Trying format: Array brackets (PHP/WordPress standard for arrays)
-        geoFormData.append("post_images[]", featuredMediaId.toString());
-        console.log("✅ Set post_images[] field:", featuredMediaId.toString());
-
-        // Log all FormData entries for debugging
-        console.log("📋 FormData entries being sent:");
-        for (const [key, value] of geoFormData.entries()) {
-          console.log(
-            `  ${key}:`,
-            typeof value === "string" && value.length > 100
-              ? value.substring(0, 100) + "..."
-              : value
-          );
-        }
-      } else {
-        console.warn("⚠️ No featured media ID - skipping image attachment");
-      }
+      // Prepare GeoDirectory listing data - only include valid parameters
+      const geoData: Record<string, string> = {
+        title: formData.title,
+        content: formData.content,
+        street: formData.street,
+        country: formData.country,
+        region: formData.region,
+        city: formData.city,
+        zip: formData.zip,
+        phone: formData.phone,
+        email: formData.email,
+        status: "pending", // New listings start as pending
+      };
 
       // Add optional fields only if they have values
       if (formData.website) {
-        geoFormData.append("website", formData.website);
+        geoData.website = formData.website;
       }
 
       if (formData.post_tags) {
-        geoFormData.append("post_tags", formData.post_tags);
+        geoData.post_tags = formData.post_tags;
       }
 
       if (formData.post_category) {
-        geoFormData.append("post_category", formData.post_category);
+        geoData.post_category = formData.post_category;
       }
 
-      if (formData.latitude) {
-        geoFormData.append("latitude", formData.latitude);
+      // Add author if logged in
+      if (user?.id) {
+        geoData.author = user.id.toString();
       }
 
-      if (formData.longitude) {
-        geoFormData.append("longitude", formData.longitude);
-      }
-
-      if (formData.facebook) {
-        geoFormData.append("facebook", formData.facebook);
-      }
-
-      if (formData.twitter) {
-        geoFormData.append("twitter", formData.twitter);
-      }
-
-      if (formData.business_hours) {
-        geoFormData.append("business_hours", formData.business_hours);
-      }
-
-      if (formData.special_offers) {
-        geoFormData.append("special_offers", formData.special_offers);
-      }
-
-      if (formData.video) {
-        geoFormData.append("video", formData.video);
-      }
-
-      if (formData.featured) {
-        geoFormData.append("featured", formData.featured);
-      }
-
-      if (formData.slug) {
-        geoFormData.append("slug", formData.slug);
-      }
-
-      console.log("📤 Submitting to GeoDirectory API with FormData");
-      console.log("👤 Authenticated User ID:", user.id);
-      console.log("🖼️ Featured Media ID:", featuredMediaId || "None");
+      console.log("📤 Submitting to GeoDirectory API:", geoData);
 
       const url = `${getApiUrl("geodir")}/places`;
       const options = {
         method: "POST",
         headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json",
           Authorization: authHeader,
-          // Note: Don't set Content-Type, let browser set it with boundary for multipart/form-data
         },
-        body: geoFormData,
+        body: new URLSearchParams(geoData),
       };
 
       const response = await fetch(url, options);
       const data = await response.json();
 
       if (response.ok) {
-        console.log("✅ Listing created successfully!");
+        console.log("✅ Listing created:", data);
         console.log("📋 Listing ID:", data.id);
-        console.log("🖼️ Featured Media ID:", data.featured_media);
+
+        // Now upload and attach the featured image if provided
+        if (featuredImage && data.id) {
+          try {
+            toast.info("Uploading featured image...");
+
+            const imageFormData = new FormData();
+            imageFormData.append("file", featuredImage);
+            imageFormData.append("title", `${formData.title} - Featured Image`);
+            imageFormData.append("alt_text", formData.title);
+            imageFormData.append("post", data.id.toString()); // Attach to the listing
+
+            const imageResponse = await fetch(
+              "https://shoplocal.kinsta.cloud/wp-json/wp/v2/media",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: authHeader,
+                },
+                body: imageFormData,
+              }
+            );
+
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json();
+              console.log("✅ Image uploaded successfully");
+              console.log("📸 Image data:", imageData);
+              console.log("📸 Media ID:", imageData.id);
+              console.log("📸 Image URL:", imageData.source_url);
+
+              // Wait for WordPress to generate thumbnails (short delay)
+              toast.info("Processing image thumbnails...");
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+
+              // Fetch the media item again to get thumbnail URLs
+              const mediaDetailResponse = await fetch(
+                `https://shoplocal.kinsta.cloud/wp-json/wp/v2/media/${imageData.id}`,
+                {
+                  method: "GET",
+                  headers: {
+                    Authorization: authHeader,
+                    Accept: "application/json",
+                  },
+                }
+              );
+
+              if (mediaDetailResponse.ok) {
+                const mediaDetail = await mediaDetailResponse.json();
+                console.log("📸 Media detail with thumbnails:", mediaDetail);
+                console.log(
+                  "📸 Media details object:",
+                  mediaDetail.media_details
+                );
+                console.log(
+                  "📸 Thumbnail sizes:",
+                  mediaDetail.media_details?.sizes
+                );
+              }
+
+              // Update the listing with multiple image fields to ensure compatibility
+              console.log("📤 Updating listing with image data");
+
+              const updateResponse = await fetch(`${url}/${data.id}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  Accept: "application/json",
+                  Authorization: authHeader,
+                },
+                body: new URLSearchParams({
+                  featured_media: imageData.id.toString(),
+                  post_images: imageData.id.toString(),
+                  default_image: imageData.source_url,
+                }),
+              });
+
+              const updateData = await updateResponse.json();
+              console.log("✅ Update response:", updateData);
+              console.log(
+                "🖼️ Featured media in response:",
+                updateData.featured_media
+              );
+              console.log(
+                "🖼️ Post images in response:",
+                updateData.post_images
+              );
+              console.log(
+                "🖼️ Default image in response:",
+                updateData.default_image
+              );
+
+              if (
+                updateResponse.ok &&
+                (updateData.featured_media || updateData.post_images)
+              ) {
+                toast.success("Featured image uploaded successfully!");
+              } else {
+                console.warn("⚠️ Image update response:", updateData);
+                toast.warning("Listing created but image may not be attached.");
+              }
+            } else {
+              const imageError = await imageResponse.json();
+              console.error("❌ Image upload failed:", imageError);
+              toast.warning("Listing created but image upload failed.");
+            }
+          } catch (imageError) {
+            console.error("❌ Image upload error:", imageError);
+            toast.warning("Listing created but image upload failed.");
+          }
+        }
 
         setSubmitStatus("success");
         setShowSuccessModal(true);
         toast.success("Listing created successfully!");
+        console.log("✅ Listing created:", data);
       } else {
         setSubmitStatus("error");
         const errorMsg =
@@ -787,7 +710,6 @@ export function CreateListing() {
                                 e.stopPropagation();
                                 setFeaturedImage(null);
                                 setFeaturedImagePreview(null);
-                                setFeaturedImageBase64(null);
                               }}
                               className="mt-2 text-sm text-red-600 hover:text-red-700"
                             >

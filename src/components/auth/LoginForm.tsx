@@ -35,7 +35,7 @@ export function LoginForm() {
     try {
       await login(formData.username, formData.password);
       toast.success("Successfully logged in!");
-      const from = (location.state as any)?.from || "/sell";
+      const from = (location.state as any)?.from || "/create-listing";
       navigate(from, { replace: true });
     } catch (err) {
       if (err instanceof Error) {
@@ -92,6 +92,33 @@ export function LoginForm() {
             <p className="text-sm text-red-800">{error}</p>
           </div>
         )}
+
+        {/* Info Box */}
+        <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
+          <p className="text-sm text-purple-900 font-medium">
+            🔧 Troubleshooting Login Issues?
+          </p>
+          <div className="text-xs text-purple-700 space-y-1.5">
+            <p>
+              <strong>If you just registered and can't login:</strong>
+            </p>
+            <p>
+              1. Check that user exists in WordPress admin (Users → All Users)
+            </p>
+            <p>
+              2. Try logging in with your <strong>WordPress username</strong> or{" "}
+              <strong>email address</strong>
+            </p>
+            <p>3. Verify your WordPress custom API endpoint is configured</p>
+            <p>4. Check browser console (F12) for detailed error logs</p>
+          </div>
+          <div className="pt-2 border-t border-purple-200">
+            <p className="text-xs text-purple-600">
+              💡 <strong>Temporary workaround:</strong> Login to WordPress
+              admin, then come back here
+            </p>
+          </div>
+        </div>
 
         {/* Social Login Buttons */}
         <div className="space-y-3 mb-8">

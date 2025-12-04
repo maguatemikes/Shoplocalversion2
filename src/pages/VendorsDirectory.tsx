@@ -226,8 +226,6 @@ function placeToVendor(
     latitude: place.latitude,
     longitude: place.longitude,
     distance: distance,
-    // Pass actual claimed status from API (0 = unclaimed, 1 = claimed)
-    claimed: place.claimed || 0,
     socialLinks: {
       website: place.website || undefined,
       instagram: place.twitter || undefined, // Using twitter field for instagram as example
@@ -248,12 +246,10 @@ export default function VendorsDirectory() {
 
   // Cache configuration
   const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
-  const CACHE_KEY = "vendorsDirectory_cache_v16"; // v16 = Merging claimed from Custom API
+  const CACHE_KEY = "vendorsDirectory_cache_v14"; // v14 = Removed console logs
 
   // DEBUG: Verify new code is loading
-  console.log(
-    "🔄 VendorsDirectory v16 LOADED - Merging claimed from Custom API!"
-  );
+  console.log("🔄 VendorsDirectory v3 LOADED - New code active!");
 
   // State management
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -469,7 +465,6 @@ export default function VendorsDirectory() {
 
       const url = `https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places?${params.toString()}`;
 
-      console.log("🌐 API URL:", url);
       console.log(
         "🌐 Fetching from GeoDirectory API + Custom API for ratings..."
       );
@@ -483,13 +478,12 @@ export default function VendorsDirectory() {
         timeout: 10000,
       });
 
-      // Fetch ratings AND claimed status from Custom API (has proper ordering)
+      // Fetch ratings from Custom API (has proper ordering)
       const ratingsResponse = await axios
         .get("https://shoplocal.kinsta.cloud/wp-json/custom-api/v1/places", {
           params: {
             page: 1,
             per_page: 100,
-            _cache_bust: Date.now(), // Add cache busting to get fresh claimed/verified status
           },
           headers: {
             Accept: "application/json",
@@ -501,48 +495,24 @@ export default function VendorsDirectory() {
 
       const ratingsData = ratingsResponse.data?.data || [];
 
-      console.log("🔍 Custom API Response (first 3):", ratingsData.slice(0, 3));
-
-      // Merge ratings AND claimed status into places (keep GeoDirectory data, add Custom API data)
+      // Merge ratings into places (keep GeoDirectory data, add Custom API ratings)
       const placesWithRatings = response.data.map((place: any) => {
         // Compare IDs as strings (Custom API returns string, GeoDirectory returns number)
         const ratingData = ratingsData.find(
           (r: any) => String(r.ID) === String(place.id)
         );
-        if (ratingData) {
-          const rating =
-            ratingData.gd_custom_ratings !== undefined
-              ? parseFloat(ratingData.gd_custom_ratings) || 0
-              : place.rating;
+        if (ratingData && ratingData.gd_custom_ratings !== undefined) {
+          const rating = parseFloat(ratingData.gd_custom_ratings) || 0;
           return {
             ...place,
             gd_custom_ratings: rating,
-            // Add claimed status from custom API if available
-            claimed:
-              ratingData.claimed !== undefined
-                ? ratingData.claimed
-                : place.claimed || 0,
           };
         }
-        return {
-          ...place,
-          claimed: place.claimed || 0, // Default to 0 if not found
-        };
+        return place;
       });
 
       // Store all places
       setAllPlaces(placesWithRatings);
-
-      // DEBUG: Log claimed status for first 5 listings
-      console.log(
-        "📊 CLAIMED STATUS FROM API:",
-        placesWithRatings.slice(0, 5).map((p: any) => ({
-          id: p.id,
-          title: p.post_title || p.title?.rendered,
-          claimed: p.claimed,
-          claim_user_id: p.claim_user_id,
-        }))
-      );
 
       // Cache the response
       setCachedData(placesWithRatings, currentFilters);
@@ -550,7 +520,13 @@ export default function VendorsDirectory() {
       // Apply client-side filtering and pagination
       applyFiltersAndPagination(placesWithRatings, page);
     } catch (err: any) {
-      console.error("⚠️ Error fetching places:", err.message);
+      console.error("❌ Error fetching places:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
 
       const errorMessage =
         err.response?.data?.message ||
@@ -604,13 +580,13 @@ export default function VendorsDirectory() {
       }
 
       setMapMarkers(data);
-    } catch (err: any) {
-      console.warn("⚠️ Map markers unavailable:", err.message);
+    } catch (err) {
+      console.error("Error fetching map markers:", err);
       setMapMarkers([]);
     }
   };
 
-  // Fetch all categories from Custom API (extracts from places data)
+  // Fetch all categories from GeoDirectory API
   const fetchCategories = async () => {
     try {
       const url =
@@ -621,30 +597,32 @@ export default function VendorsDirectory() {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        timeout: 15000,
-        validateStatus: (status) => status >= 200 && status < 500,
+        timeout: 10000,
       });
-
-      if (response.status !== 200) {
-        console.warn(`⚠️ Categories API returned status ${response.status}`);
-        throw new Error(`API returned status ${response.status}`);
-      }
 
       const data = response.data;
 
+      // Check if API returned array
       if (!Array.isArray(data)) {
         console.error("❌ Categories API returned non-array:", data);
         throw new Error("Invalid API response format");
       }
 
+      // Extract category objects from the API response
+      // The API returns an array of category objects with name, slug, id, icon, fa_icon, etc.
       const categoriesArray = data
         .filter((cat: any) => cat.name && cat.name !== "")
         .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      console.log("✅ Categories loaded from API:", categoriesArray.length);
+      console.log("📦 Categories with icons from API:", categoriesArray);
       setCategories(categoriesArray);
     } catch (err: any) {
-      console.error("⚠️ Using fallback categories due to error:", err.message);
+      console.error("Error fetching categories:", err);
+      console.error("❌ Category error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
 
       // Set fallback categories
       setCategories([
@@ -672,14 +650,8 @@ export default function VendorsDirectory() {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        timeout: 15000,
-        validateStatus: (status) => status >= 200 && status < 500,
+        timeout: 10000,
       });
-
-      if (placesResponse.status !== 200) {
-        console.warn(`⚠️ Places API returned status ${placesResponse.status}`);
-        throw new Error(`API returned status ${placesResponse.status}`);
-      }
 
       const placesData = placesResponse.data;
 
@@ -796,9 +768,16 @@ export default function VendorsDirectory() {
         console.log("🌍 [CITIES FALLBACK] Extracted cities:", citiesArray);
       }
     } catch (err: any) {
-      console.error("⚠️ Using fallback locations due to error:", err.message);
+      console.error("❌ Error fetching locations:", err);
+      console.error("❌ Location error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        stack: err.stack,
+      });
 
       // Set fallback regions
+      console.log("⚠️ Using fallback regions due to API error");
       setRegions([
         { id: 1, name: "California", slug: "california" },
         { id: 2, name: "New York", slug: "new-york" },
@@ -865,9 +844,7 @@ export default function VendorsDirectory() {
         // Show manual location option when geolocation fails
         setShowManualLocation(true);
 
-        console.log(
-          "📍 Geolocation not available - manual location option enabled"
-        );
+        console.warn("📍 Geolocation blocked - manual location option enabled");
       },
       {
         enableHighAccuracy: false, // Changed to false for better compatibility
@@ -998,10 +975,9 @@ export default function VendorsDirectory() {
 
   // Fetch when page changes (no debounce for pagination)
   useEffect(() => {
-    // Only skip the fetch on the very first mount (when allPlaces is empty)
-    // This allows page 1 to work after navigating to other pages
-    if (allPlaces.length > 0) {
-      applyFiltersAndPagination(allPlaces, currentPage);
+    if (currentPage > 1) {
+      // Don't fetch on initial mount (page 1 already fetched above)
+      fetchPlaces(currentPage, true); // Use cache for pagination
     }
   }, [currentPage]);
 
@@ -1260,6 +1236,21 @@ export default function VendorsDirectory() {
                       <SlidersHorizontal className="w-5 h-5 text-gray-900" />
                       <h3 className="text-lg text-gray-900">Filters</h3>
                     </div>
+                    {(searchQuery ||
+                      regionFilter !== "all" ||
+                      cityFilter !== "all" ||
+                      categoryFilter !== "all" ||
+                      ratingFilter[0] > 0 ||
+                      openNow ||
+                      verifiedOnly ||
+                      featuredOnly) && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-6">
@@ -1383,17 +1374,9 @@ export default function VendorsDirectory() {
                     <Button
                       variant="outline"
                       onClick={clearAllFilters}
-                      disabled={loading}
                       className="w-full rounded-lg"
                     >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        "Clear All Filters"
-                      )}
+                      Clear All Filters
                     </Button>
                   </div>
                 </div>
@@ -1799,10 +1782,7 @@ function VendorBusinessCard({
 }) {
   const navigate = useNavigate();
   const isFeatured = vendor.rating >= 4.5; // Example logic for featured
-
-  // Check if listing is claimed - uses actual claimed field from API
-  // claimed === 1 means the business owner has registered and connected their account
-  const isClaimed = vendor.claimed === 1;
+  const isClaimed = vendor.rating >= 4.5; // Mock logic - in real app would be a property
 
   // Generate stable review count based on vendor ID (won't change on re-render)
   const reviewCount = Math.floor(((parseInt(vendor.id) * 7) % 150) + 10); // Generates 10-159 reviews consistently
@@ -1826,15 +1806,9 @@ function VendorBusinessCard({
         {/* Gradient overlay for better badge visibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-        {/* Claimed/Unclaimed Badge */}
-        {isClaimed ? (
-          <div className="absolute top-4 left-4 bg-sky-600 text-white px-2.5 py-0.5 rounded-md text-xs font-medium shadow-lg backdrop-blur-sm flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            VERIFIED
-          </div>
-        ) : (
-          <div className="absolute top-4 left-4 bg-amber-600 text-white px-3 py-1 rounded-md text-xs font-medium shadow-lg backdrop-blur-sm">
-            UNCLAIMED
+        {!isClaimed && (
+          <div className="absolute top-4 left-4 bg-amber-600 text-white px-2 py-0.5 rounded text-xs font-normal shadow-lg backdrop-blur-sm">
+            Unclaimed
           </div>
         )}
       </div>
@@ -1964,11 +1938,6 @@ function VendorBusinessCard({
                 variant="outline"
                 className="rounded-md h-10 w-10 p-0 border-sky-600 text-sky-600 hover:bg-sky-600 hover:text-white transition-all"
                 onClick={() => {
-                  console.log("🛒 Visit Store clicked:", {
-                    vendorName: vendor.name,
-                    vendorSlug: vendor.slug,
-                    navigatingTo: `/vendor/${vendor.slug}/`,
-                  });
                   onNavigate();
                   navigate(`/vendor/${vendor.slug}/`, {
                     state: { vendor },
