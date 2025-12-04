@@ -29,7 +29,7 @@ import VendorsDirectory from "./pages/VendorsDirectory";
 import { VendorStorefront } from "./pages/VendorStorefront";
 import { VendorDetail } from "./pages/VendorDetail";
 import { ProductCatalog } from "./pages/ProductCatalog";
-import { ProductDetail } from "./pages/ProductDetail";
+
 import { BecomeSeller } from "./pages/BecomeSeller";
 import { HowItWorks } from "./pages/HowItWorks";
 import { HelpCenter } from "./pages/HelpCenter";
@@ -41,7 +41,7 @@ import { FAQ } from "./pages/FAQ";
 import { Cart } from "./pages/Cart";
 import { Checkout } from "./pages/Checkout";
 import { CustomerDashboard } from "./pages/CustomerDashboard";
-import { VendorDashboard } from "./pages/VendorDashboard";
+
 import { Wishlist } from "./pages/Wishlist";
 import { OrderHistory } from "./pages/OrderHistory";
 import { UserProfile } from "./pages/UserProfile";
@@ -164,15 +164,6 @@ function AppContent() {
               VENDOR DASHBOARD ROUTES
               Vendor management and authentication
               ============================================ */}
-          <Route
-            path="/vendor-dashboard"
-            element={
-              <ProtectedRoute requiredRole="vendor">
-                <VendorDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/vendor-login" element={<VendorLoginPage />} />
 
           {/* ============================================
               USER AUTHENTICATION ROUTES

@@ -1,6 +1,6 @@
 /**
  * ProductCard.tsx - Product Display Card Component
- * 
+ *
  * Displays product information in a card format with:
  * - Product image with hover effects
  * - Wishlist functionality
@@ -8,22 +8,21 @@
  * - Vendor information
  * - Pricing and ratings
  * - Add to cart button
- * 
+ *
  * Features responsive hover states and navigation to product/vendor pages.
- * 
+ *
  * @module ProductCard
  */
 
-import { Heart, Tag, Flame, Star, ShoppingCart, Eye } from 'lucide-react';
-import { Product } from '../lib/mockData';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AddToCartModal from './AddtoCartModal';
+import { Heart, Tag, Flame, Star, ShoppingCart, Eye } from "lucide-react";
+import { Product } from "../lib/mockData";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 /**
  * ProductCard Props Interface
- * 
+ *
  * @property {Product} product - Product data to display
  * @property {Function} [onViewProduct] - Optional callback when viewing product details
  * @property {Function} [onViewVendor] - Optional callback when viewing vendor page
@@ -36,30 +35,30 @@ interface ProductCardProps {
 
 /**
  * ProductCard Component
- * 
+ *
  * Displays a single product with all relevant information and actions.
  * Includes smart badge logic for discounts, new items, trending products, and low stock.
- * 
+ *
  * @param {ProductCardProps} props - Component props
  * @returns {JSX.Element} Product card with image, details, and actions
  */
-export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCardProps) {
+export function ProductCard({
+  product,
+  onViewProduct,
+  onViewVendor,
+}: ProductCardProps) {
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [lastAddedProduct, setLastAddedProduct] = useState({
-  name: "",
-  image: "",
-  });
-
 
   // Calculate discount information
-  const hasDiscount = product.originalPrice && product.originalPrice > product.price;
-  const discountPercentage = hasDiscount 
-    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+  const hasDiscount =
+    product.originalPrice && product.originalPrice > product.price;
+  const discountPercentage = hasDiscount
+    ? Math.round(
+        ((product.originalPrice! - product.price) / product.originalPrice!) *
+          100
+      )
     : 0;
-  const OrigPrice = product.originalPrice;
-
 
   // Check if stock is low (less than 20 items)
   const isLowStock = product.stock !== undefined && product.stock < 20;
@@ -67,28 +66,13 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
   /**
    * Handle card click to view product details
    * Generates slug from product name and navigates to product page
-   * 
+   *
    * @param {React.MouseEvent} e - Click event
    */
- const handleCardClick = (e: React.MouseEvent) => {
-    const slug = product.name.toLowerCase()
-    // Remove accents (same as remove_accents() in WP)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    // Remove HTML-like entities (&amp; → and)
-    .replace(/&.+?;/g, "")
-    // Remove apostrophes (men’s → mens)
-    .replace(/'/g, "")
-    // Convert non-alphanumeric groups to hyphens
-    .replace(/[^a-z0-9]+/g, "-")
-    // Trim hyphens from start/end
-    .replace(/^-+|-+$/g, "")
-    // Collapse multiple hyphens
-    .replace(/-+/g, "-");        // collapse multiple dashes
-    // collapse multiple dashes
+  const handleCardClick = (e: React.MouseEvent) => {
+    const slug = product.name.toLowerCase().replace(/\s+/g, "-");
     if (onViewProduct) {
       onViewProduct(slug);
-      
     } else {
       navigate(`/product/${slug}`);
     }
@@ -97,67 +81,37 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
   /**
    * Handle vendor name click to view vendor page
    * Stops propagation to prevent card click, generates vendor slug
-   * 
+   *
    * @param {React.MouseEvent} e - Click event
-   * @param {string} vendorName - Name of the vendor
+   * @param {string | object} vendor - Vendor name or vendor object
    */
-  const handleVendorClick = (e: React.MouseEvent, vendorName: string) => {
+  const handleVendorClick = (e: React.MouseEvent, vendor: any) => {
     e.stopPropagation();
-    const slug = vendorName.toLowerCase().replace(/\s+/g, '-');
+    // Handle both string and object vendor formats
+    const vendorSlug =
+      typeof vendor === "string"
+        ? vendor.toLowerCase().replace(/\s+/g, "-")
+        : vendor.slug || vendor.name?.toLowerCase().replace(/\s+/g, "-");
+
     if (onViewVendor) {
-      onViewVendor(slug);
+      onViewVendor(vendorSlug);
     } else {
-      navigate(`/vendor/${slug}`);
+      navigate(`/vendor/${vendorSlug}`);
     }
   };
 
-
-  const handleAddToCart = () => {
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-  // Check if product already exists
-  const existingIndex = cart.findIndex((item) => item.id === product.id);
-
-  if (existingIndex !== -1) {
-    // Update quantity
-    cart[existingIndex].quantity += 1;
-  } else {
-    // Add new product
-    cart.push({
-      id: product.id,
-      name: product.name,
-      image: product.image,
-      price: product.price,
-      quantity: 1,
-    });
-  }
-
-  // Save back to localStorage
-  localStorage.setItem("cart", JSON.stringify(cart));
-
-  // Show popup modal
-  setLastAddedProduct({
-    name: product.name,
-    image: product.image,
-  });
-
-  setShowModal(true);
-
-  // Optional auto-close
-  setTimeout(() => setShowModal(false), 2000);
-};
-
-
-  
+  // Get vendor name - handle both string and object formats
+  const vendorName =
+    typeof product.vendor === "string"
+      ? product.vendor
+      : product.vendor?.name || "Unknown Vendor";
 
   return (
-    <><div
-      className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 transition-all hover:shadow-xl hover:shadow-gray-100/50 flex flex-col h-full"
-    >
+    <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 transition-all hover:shadow-xl hover:shadow-gray-100/50 flex flex-col h-full">
       {/* ============================================
-        PRODUCT IMAGE SECTION
-        Image with hover zoom, badges, and wishlist button
-        ============================================ */}
+          PRODUCT IMAGE SECTION
+          Image with hover zoom, badges, and wishlist button
+          ============================================ */}
       <div className="relative aspect-square overflow-hidden bg-gray-50 w-full">
         {/* Clickable Image Container */}
         <button
@@ -167,7 +121,8 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
           <ImageWithFallback
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
         </button>
 
         {/* Wishlist Toggle Button - Top Right */}
@@ -175,20 +130,21 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
           onClick={(e) => {
             e.stopPropagation();
             setIsWishlisted(!isWishlisted);
-          } }
-          className={`absolute top-3 right-3 w-9 h-9 backdrop-blur-sm rounded-full flex items-center justify-center transition-all shadow-sm z-10 ${isWishlisted
-              ? 'bg-sky-600 text-white hover:bg-sky-700'
-              : 'bg-white/90 text-gray-600 hover:bg-white hover:scale-110'}`}
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          }}
+          className={`absolute top-3 right-3 w-9 h-9 backdrop-blur-sm rounded-full flex items-center justify-center transition-all shadow-sm z-10 ${
+            isWishlisted
+              ? "bg-sky-600 text-white hover:bg-sky-700"
+              : "bg-white/90 text-gray-600 hover:bg-white hover:scale-110"
+          }`}
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
-          <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+          <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
         </button>
 
         {/* Status Badges - Top Left Corner */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
           {/* Discount Badge */}
-
-          {hasDiscount != 0 && (
+          {hasDiscount && (
             <span className="px-2.5 py-1 bg-red-600 text-white rounded-lg text-xs">
               -{discountPercentage}%
             </span>
@@ -229,17 +185,16 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
       </div>
 
       {/* ============================================
-        PRODUCT INFORMATION SECTION
-        Vendor, name, rating, price, and actions
-        ============================================ */}
+          PRODUCT INFORMATION SECTION
+          Vendor, name, rating, price, and actions
+          ============================================ */}
       <div className="p-5 flex flex-col flex-1">
-
         {/* Vendor Name - Clickable */}
         <button
           onClick={(e) => handleVendorClick(e, product.vendor)}
           className="text-xs text-gray-500 hover:text-sky-600 mb-2 transition-colors text-left uppercase tracking-wide"
         >
-          {product.vendor}
+          {vendorName}
         </button>
 
         {/* Product Name - Clickable */}
@@ -253,7 +208,7 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
         </button>
 
         {/* Rating & Review Count */}
-        {product.rating != 0 && (
+        {product.rating && (
           <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -263,7 +218,8 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
               <>
                 <span className="text-gray-300">•</span>
                 <span className="text-xs text-gray-500">
-                  {product.reviewCount} {product.reviewCount === 1 ? 'review' : 'reviews'}
+                  {product.reviewCount}{" "}
+                  {product.reviewCount === 1 ? "review" : "reviews"}
                 </span>
               </>
             )}
@@ -275,30 +231,35 @@ export function ProductCard({ product, onViewProduct, onViewVendor }: ProductCar
           {/* Price Display with Optional Original Price */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-lg text-gray-900">${product.price.toFixed(2)}</span>
-              {hasDiscount != 0 && (
-                <span className="text-lg text-gray-900 line-through">${OrigPrice}</span>
+              <span className="text-lg text-gray-900">
+                ${product.price.toFixed(2)}
+              </span>
+              {hasDiscount && (
+                <span className="text-sm text-gray-400 line-through">
+                  ${product.originalPrice!.toFixed(2)}
+                </span>
               )}
             </div>
           </div>
 
           {/* Category Badge */}
-          <span className="text-xs text-gray-500 px-2 py-1 bg-gray-50 rounded">{product.category}</span>
+          <span className="text-xs text-gray-500 px-2 py-1 bg-gray-50 rounded">
+            {product.category}
+          </span>
         </div>
 
         {/* Add to Cart Button */}
         <button
-          onClick={() =>  handleAddToCart() }
+          onClick={(e) => {
+            e.stopPropagation();
+            // TODO: Implement add to cart logic
+          }}
           className="w-full mt-4 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm flex items-center justify-center gap-2"
         >
           <ShoppingCart className="w-4 h-4" />
           Add to Cart
         </button>
       </div>
-    </div><AddToCartModal
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        productName={lastAddedProduct.name}
-        productImage={lastAddedProduct.image} /></>
+    </div>
   );
 }
