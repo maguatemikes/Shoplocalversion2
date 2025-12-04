@@ -9,8 +9,11 @@ import { Checkbox } from '../components/ui/checkbox';
 import { products } from '../lib/mockData';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { getShippingMethods } from "../api/woo/checkout";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import CheckoutForm from "../components/CheckoutForm";
 import axios from 'axios';
-
+const stripePromise = loadStripe("pk_test_51GqW2jEKcy3dIHlqwnpb3jz5ZLGk3wt5JiXmKht8CqdSNHRMRAGhsEQm8Fd8KNcFkGGReHmOrC17nj8yKjj5z5uo00abOdDkUt");
 interface CartItem {
   id: number;
   name: string;
@@ -25,6 +28,18 @@ export function Checkout() {
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [form, setForm] = useState({
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  country: "",
+});
+
   const [shippingMethods, setShipping] = useState([]);
   const selected = shippingMethods.find(m => m.id === shippingMethod);
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -32,18 +47,26 @@ export function Checkout() {
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
   const [countries,setCountries] = useState([]);
-   const [states,setStates] = useState([]);
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    country: "",
-  });
+  const [states,setStates] = useState([]);
+
+
+  // Convert cart items to WooCommerce format
+const orderItems = cartItems.map(item => ({
+  product_id: item.id,
+  qty: item.quantity,
+}));
+
+const billingInfo = {
+  firstName: form.firstName,
+  lastName: form.lastName,
+  email: form.email,
+  phone: form.phone,
+  address: form.address,
+  city: form.city,
+  state: form.state,
+  zip: form.zip,
+  country: form.country,
+};
 
   useEffect(() => {
   const stored = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -315,6 +338,7 @@ const handleChange = (e) => {
             ) : (
               <>
                 {/* Payment Method */}
+
                 <div className="bg-white rounded-2xl p-8 border border-gray-200">
                   <div className="flex items-center gap-3 mb-6">
                     <CreditCard className="w-6 h-6 text-blue-600" />
@@ -322,40 +346,28 @@ const handleChange = (e) => {
                   </div>
 
                   <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="cardNumber">Card Number</Label>
-                      <Input
-                        id="cardNumber"
-                        placeholder="1234 5678 9012 3456"
-                        className="mt-1 rounded-lg"
+                  {step === "payment" && (
+                    <Elements stripe={stripePromise}>
+                      <CheckoutForm
+                            billing={{
+                            firstName: form.firstName,
+                            lastName: form.lastName,
+                            email: form.email,
+                            phone: form.phone,
+                            address: form.address,
+                            city: form.city,
+                            state: form.state,
+                            zip: form.zip,
+                            country: form.country,
+                          }}
+                          items={cartItems.map(item => ({
+                            product_id: item.id,
+                            qty: item.quantity,
+                          }))}
+                      
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="cardName">Cardholder Name</Label>
-                      <Input
-                        id="cardName"
-                        placeholder="John Doe"
-                        className="mt-1 rounded-lg"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="expiry">Expiry Date</Label>
-                        <Input
-                          id="expiry"
-                          placeholder="MM/YY"
-                          className="mt-1 rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cvv">CVV</Label>
-                        <Input
-                          id="cvv"
-                          placeholder="123"
-                          className="mt-1 rounded-lg"
-                        />
-                      </div>
-                    </div>
+                    </Elements>
+                  )}
                   </div>
 
                   <div className="mt-6 flex items-start gap-2">
@@ -376,7 +388,7 @@ const handleChange = (e) => {
                     Back
                   </Button>
                   <Button
-                    onClick={() => navigate('/my-account/')}
+                    onClick={() => document.getElementById("CardForm").requestSubmit()}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl"
                     size="lg"
                   >
