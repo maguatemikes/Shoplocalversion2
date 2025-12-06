@@ -42,6 +42,7 @@ export function Checkout() {
 
   const [shippingMethods, setShipping] = useState([]);
   const selected = shippingMethods.find(m => m.id === shippingMethod);
+  const [selectedShipping, setSelectedShipping] = useState(selected);
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = selected? selected.cost : 0;
   const tax = subtotal * 0.08;
@@ -50,23 +51,7 @@ export function Checkout() {
   const [states,setStates] = useState([]);
 
 
-  // Convert cart items to WooCommerce format
-const orderItems = cartItems.map(item => ({
-  product_id: item.id,
-  qty: item.quantity,
-}));
-
-const billingInfo = {
-  firstName: form.firstName,
-  lastName: form.lastName,
-  email: form.email,
-  phone: form.phone,
-  address: form.address,
-  city: form.city,
-  state: form.state,
-  zip: form.zip,
-  country: form.country,
-};
+ 
 
   useEffect(() => {
   const stored = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -364,6 +349,13 @@ const handleChange = (e) => {
                             product_id: item.id,
                             qty: item.quantity,
                           }))}
+                          shippingMethod={{
+                            id: selected.id,
+                            cost: selected.cost,
+                            tax: selected.tax,
+                            title:selected.title,
+                            total: selected.total
+                          }}
                       
                       />
                     </Elements>
@@ -386,13 +378,6 @@ const handleChange = (e) => {
                     size="lg"
                   >
                     Back
-                  </Button>
-                  <Button
-                    onClick={() => document.getElementById("CardForm").requestSubmit()}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl"
-                    size="lg"
-                  >
-                    Place Order
                   </Button>
                 </div>
               </>
