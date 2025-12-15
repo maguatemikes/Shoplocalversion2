@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { CheckCircle } from "lucide-react";
 
 interface AddToCartModalProps {
@@ -29,13 +29,11 @@ export default function AddToCartModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center"
+            className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md mx-4 text-center"
           >
             <CheckCircle className="mx-auto text-green-500 w-16 h-16" />
 
-            <h2 className="text-xl font-semibold mt-4">
-              Added to Cart!
-            </h2>
+            <h2 className="text-xl font-semibold mt-4">Added to Cart!</h2>
 
             <p className="text-gray-600 mt-1">{productName}</p>
 

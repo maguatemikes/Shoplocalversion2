@@ -1,122 +1,195 @@
-import { ArrowRight, Sparkles, Palette, Leaf, Pencil, Zap, ShoppingBag, UtensilsCrossed, Key, Wrench, Recycle, Gavel, Users, Calendar, Package, Award, Smartphone, Star, Shield, Gem, Crown, Search, ShoppingCart, Heart, Gift, Gamepad2, Trophy, Shirt, Pizza, Salad, Beef, IceCream, Utensils, PartyPopper, Mic2, Car, Box, WashingMachine, Scissors, Sprout, Plug, Hammer, Armchair, Laptop, Watch, Music, Grid3x3, Dumbbell, Store, UserPlus, CheckCircle, MapPin, Building2, Filter, Map } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { VendorCard } from '../components/VendorCard';
-import { ProductCard } from '../components/ProductCard';
-import { ShopLocalSection } from '../components/ShopLocalSection';
-import { vendors, products, categories, marketplaceItems } from '../lib/mockData';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { useState } from 'react';
-import { motion } from 'motion/react';
-
-// Icon mapping
-const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+import {
+  ArrowRight,
+  Sparkles,
   Palette,
   Leaf,
   Pencil,
-  Zap
-};
+  Zap,
+  ShoppingBag,
+  UtensilsCrossed,
+  Key,
+  Wrench,
+  Recycle,
+  Gavel,
+  Users,
+  Calendar,
+  Package,
+  Award,
+  Smartphone,
+  Star,
+  Shield,
+  Gem,
+  Crown,
+  Search,
+  ShoppingCart,
+  Heart,
+  Gift,
+  Gamepad2,
+  Trophy,
+  Shirt,
+  Pizza,
+  Salad,
+  Beef,
+  IceCream,
+  Utensils,
+  PartyPopper,
+  Mic2,
+  Car,
+  Box,
+  WashingMachine,
+  Scissors,
+  Sprout,
+  Plug,
+  Hammer,
+  Armchair,
+  Laptop,
+  Watch,
+  Music,
+  Grid3x3,
+  Dumbbell,
+  Store,
+  UserPlus,
+  CheckCircle,
+  MapPin,
+  Building2,
+  Filter,
+  Map,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { VendorCard } from "../components/VendorCard";
+import { ProductCard } from "../components/ProductCard";
+import { ShopLocalSection } from "../components/ShopLocalSection";
+import {
+  vendors,
+  products,
+  categories,
+  marketplaceItems,
+} from "../lib/mockData";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { useState } from "react";
+import { motion } from "motion/react";
+
+// Icon mapping
+const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } =
+  {
+    Palette,
+    Leaf,
+    Pencil,
+    Zap,
+  };
 
 // Sub-category icon mapping
-const subCategoryIcons: { [key: string]: { [key: string]: React.ComponentType<{ className?: string }> } } = {
-  'Products': {
-    'All': Grid3x3,
-    'Custom Gifts': Gift,
-    'Toys': Gamepad2,
-    'Sports': Trophy,
-    'Jewelry': Gem,
-    'Clothes': Shirt
+const subCategoryIcons: {
+  [key: string]: { [key: string]: React.ComponentType<{ className?: string }> };
+} = {
+  Products: {
+    All: Grid3x3,
+    "Custom Gifts": Gift,
+    Toys: Gamepad2,
+    Sports: Trophy,
+    Jewelry: Gem,
+    Clothes: Shirt,
   },
-  'Food': {
-    'All': Utensils,
-    'Pizza': Pizza,
-    'Healthy': Salad,
-    'Burgers': Beef,
-    'Desserts': IceCream,
-    'Asian': UtensilsCrossed
+  Food: {
+    All: Utensils,
+    Pizza: Pizza,
+    Healthy: Salad,
+    Burgers: Beef,
+    Desserts: IceCream,
+    Asian: UtensilsCrossed,
   },
-  'Rentals': {
-    'All': Key,
-    'Events': PartyPopper,
-    'Audio/Video': Mic2,
-    'Vehicles': Car,
-    'Equipment': Box
+  Rentals: {
+    All: Key,
+    Events: PartyPopper,
+    "Audio/Video": Mic2,
+    Vehicles: Car,
+    Equipment: Box,
   },
-  'Services': {
-    'All': Wrench,
-    'Cleaning': WashingMachine,
-    'Lawn Care': Sprout,
-    'Plumbing': Package,
-    'Electrical': Plug,
-    'Handyman': Hammer
+  Services: {
+    All: Wrench,
+    Cleaning: WashingMachine,
+    "Lawn Care": Sprout,
+    Plumbing: Package,
+    Electrical: Plug,
+    Handyman: Hammer,
   },
-  'Used Goods': {
-    'All': Recycle,
-    'Furniture': Armchair,
-    'Electronics': Laptop,
-    'Antiques': Watch,
-    'Appliances': WashingMachine
+  "Used Goods": {
+    All: Recycle,
+    Furniture: Armchair,
+    Electronics: Laptop,
+    Antiques: Watch,
+    Appliances: WashingMachine,
   },
-  'Auctions': {
-    'All': Gavel,
-    'Jewelry': Gem,
-    'Art': Palette,
-    'Collectibles': Star,
-    'Music': Music
+  Auctions: {
+    All: Gavel,
+    Jewelry: Gem,
+    Art: Palette,
+    Collectibles: Star,
+    Music: Music,
   },
-  'Local Community': {
-    'All': Users,
-    'Fitness': Dumbbell,
-    'Markets': Store,
-    'Clubs': UserPlus,
-    'Groups': Users
+  "Local Community": {
+    All: Users,
+    Fitness: Dumbbell,
+    Markets: Store,
+    Clubs: UserPlus,
+    Groups: Users,
   },
-  'Events': {
-    'All': Calendar,
-    'Music': Music,
-    'Food & Drink': UtensilsCrossed,
-    'Art': Palette,
-    'Sports': Trophy,
-    'Festivals': PartyPopper
-  }
+  Events: {
+    All: Calendar,
+    Music: Music,
+    "Food & Drink": UtensilsCrossed,
+    Art: Palette,
+    Sports: Trophy,
+    Festivals: PartyPopper,
+  },
 };
 
 export function Homepage() {
   const navigate = useNavigate();
   const featuredVendors = vendors.slice(0, 3);
-  const newProducts = products.filter(p => p.isNew).slice(0, 8);
-  
-  console.log('Homepage component is rendering');
-  
-  const [activeCategory, setActiveCategory] = useState<string>('Products');
-  const [activeTab, setActiveTab] = useState('All');
-  
+  const newProducts = products.filter((p) => p.isNew).slice(0, 8);
+
+  console.log("Homepage component is rendering");
+
+  const [activeCategory, setActiveCategory] = useState<string>("Products");
+  const [activeTab, setActiveTab] = useState("All");
+
   // Define subcategories for each main category
   const categorySubTabs: { [key: string]: string[] } = {
-    'Products': ['All', 'Custom Gifts', 'Toys', 'Sports', 'Jewelry', 'Clothes'],
-    'Food': ['All', 'Pizza', 'Healthy', 'Burgers', 'Desserts', 'Asian'],
-    'Rentals': ['All', 'Events', 'Audio/Video', 'Vehicles', 'Equipment'],
-    'Services': ['All', 'Cleaning', 'Lawn Care', 'Plumbing', 'Electrical', 'Handyman'],
-    'Used Goods': ['All', 'Furniture', 'Electronics', 'Antiques', 'Appliances'],
-    'Auctions': ['All', 'Jewelry', 'Art', 'Collectibles', 'Music'],
-    'Local Community': ['All', 'Fitness', 'Markets', 'Clubs', 'Groups'],
-    'Events': ['All', 'Music', 'Food & Drink', 'Art', 'Sports', 'Festivals']
+    Products: ["All", "Custom Gifts", "Toys", "Sports", "Jewelry", "Clothes"],
+    Food: ["All", "Pizza", "Healthy", "Burgers", "Desserts", "Asian"],
+    Rentals: ["All", "Events", "Audio/Video", "Vehicles", "Equipment"],
+    Services: [
+      "All",
+      "Cleaning",
+      "Lawn Care",
+      "Plumbing",
+      "Electrical",
+      "Handyman",
+    ],
+    "Used Goods": ["All", "Furniture", "Electronics", "Antiques", "Appliances"],
+    Auctions: ["All", "Jewelry", "Art", "Collectibles", "Music"],
+    "Local Community": ["All", "Fitness", "Markets", "Clubs", "Groups"],
+    Events: ["All", "Music", "Food & Drink", "Art", "Sports", "Festivals"],
   };
-  
+
   // Get current subcategory tabs
-  const currentSubTabs = categorySubTabs[activeCategory] || ['All'];
-  
+  const currentSubTabs = categorySubTabs[activeCategory] || ["All"];
+
   // Handle category change - reset to "All" tab
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
-    setActiveTab('All');
+    setActiveTab("All");
   };
-  
+
   // Filter marketplace items based on selected category and tab
-  const filteredMarketplaceItems = marketplaceItems.filter(item => {
-    const categoryMatch = item.marketplaceCategory === activeCategory;
-    const tabMatch = activeTab === 'All' || item.subCategory === activeTab;
-    return categoryMatch && tabMatch;
-  }).slice(0, 8);
+  const filteredMarketplaceItems = marketplaceItems
+    .filter((item) => {
+      const categoryMatch = item.marketplaceCategory === activeCategory;
+      const tabMatch = activeTab === "All" || item.subCategory === activeTab;
+      return categoryMatch && tabMatch;
+    })
+    .slice(0, 8);
 
   return (
     <div className="min-h-screen">
@@ -126,7 +199,7 @@ export function Homepage() {
         <div className="absolute inset-0">
           <div className="grid grid-cols-3 h-full">
             {/* Left Image */}
-            <motion.div 
+            <motion.div
               className="relative overflow-hidden"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -138,9 +211,9 @@ export function Homepage() {
                 className="w-full h-full object-cover"
               />
             </motion.div>
-            
+
             {/* Center Image */}
-            <motion.div 
+            <motion.div
               className="relative overflow-hidden"
               initial={{ opacity: 0, scale: 1.1 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -152,9 +225,9 @@ export function Homepage() {
                 className="w-full h-full object-cover"
               />
             </motion.div>
-            
+
             {/* Right Image */}
-            <motion.div 
+            <motion.div
               className="relative overflow-hidden"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -167,16 +240,16 @@ export function Homepage() {
               />
             </motion.div>
           </div>
-          
+
           {/* Dark overlay for text readability */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/70"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           />
         </div>
-        
+
         {/* Content */}
         <div className="relative z-10 w-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -192,19 +265,21 @@ export function Homepage() {
                 Shop Premium Brands & Support Local Sellers
               </h1>
               <p className="text-xl text-gray-200 mb-8 max-w-3xl mx-auto">
-                Discover exclusive products from trusted brands and independent local artisans—all in one marketplace that values quality, authenticity, and community.
+                Discover exclusive products from trusted brands and independent
+                local artisans—all in one marketplace that values quality,
+                authenticity, and community.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button 
-                  onClick={() => navigate('/products')}
+                <button
+                  onClick={() => navigate("/products")}
                   className="px-8 py-4 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-all duration-300 flex items-center gap-2 shadow-lg shadow-sky-600/30 hover:shadow-sky-600/50 hover:scale-105"
                 >
                   Start Shopping
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button 
-                  onClick={() => navigate('/vendors')}
+                <button
+                  onClick={() => navigate("/vendors")}
                   className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-lg transition-all duration-300 flex items-center gap-2 backdrop-blur-sm hover:scale-105"
                 >
                   Explore Vendors
@@ -214,7 +289,7 @@ export function Homepage() {
             </motion.div>
           </div>
         </div>
-        
+
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
           <div className="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center p-2">
@@ -226,7 +301,7 @@ export function Homepage() {
       {/* NEW: Dual Positioning Strategy Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -235,54 +310,73 @@ export function Homepage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-50 border border-sky-200 rounded-full mb-4">
               <CheckCircle className="w-4 h-4 text-sky-600" />
-              <span className="text-sm text-sky-900">Authorized Retail Partner</span>
+              <span className="text-sm text-sky-900">
+                Authorized Retail Partner
+              </span>
             </div>
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-4">Your Choice: National or Local</h2>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-4">
+              Your Choice: National or Local
+            </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're an authorized retail partner selling premium brands nationally at wholesale prices. 
-              Plus, we connect you with local authorized sellers for the same brands—supporting your community while getting what you need.
+              We're an authorized retail partner selling premium brands
+              nationally at wholesale prices. Plus, we connect you with local
+              authorized sellers for the same brands—supporting your community
+              while getting what you need.
             </p>
           </motion.div>
 
           {/* Dual Value Props */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
             {/* Shop National */}
-            <motion.div 
+            <motion.div
               className="relative bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-3xl p-8 overflow-hidden group hover:shadow-xl transition-all"
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-3xl" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/20 rounded-full blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-emerald-400/15 rounded-full blur-3xl" />
               <div className="relative">
                 <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <ShoppingBag className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl text-gray-900 mb-4">Shop National from WFE</h3>
+                <h3 className="text-2xl text-gray-900 mb-4">
+                  Shop National from WFE
+                </h3>
                 <p className="text-gray-700 mb-6">
-                  Direct from us—authorized wholesale prices on premium brands. Fast shipping nationwide. Convenient online shopping with trusted quality.
+                  Direct from us—authorized wholesale prices on premium brands.
+                  Fast shipping nationwide. Convenient online shopping with
+                  trusted quality.
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Wholesale pricing on authorized brands</span>
+                    <span className="text-gray-700">
+                      Wholesale pricing on authorized brands
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Fast nationwide shipping</span>
+                    <span className="text-gray-700">
+                      Fast nationwide shipping
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">One-stop shopping convenience</span>
+                    <span className="text-gray-700">
+                      One-stop shopping convenience
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Premium product guarantees</span>
+                    <span className="text-gray-700">
+                      Premium product guarantees
+                    </span>
                   </li>
                 </ul>
                 <button
-                  onClick={() => navigate('/products/')}
+                  onClick={() => navigate("/products/")}
                   className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all flex items-center justify-center gap-2 group-hover:scale-105"
                 >
                   Shop National Brands
@@ -292,42 +386,55 @@ export function Homepage() {
             </motion.div>
 
             {/* Shop Local */}
-            <motion.div 
+            <motion.div
               className="relative bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-3xl p-8 overflow-hidden group hover:shadow-xl transition-all"
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-pink-400/15 rounded-full blur-3xl" />
               <div className="relative">
                 <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <Store className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl text-gray-900 mb-4">Shop Local Authorized Sellers</h3>
+                <h3 className="text-2xl text-gray-900 mb-4">
+                  Shop Local Authorized Sellers
+                </h3>
                 <p className="text-gray-700 mb-6">
-                  Find authorized local sellers near you. Same brands, support your community, build local relationships. Products & services (restaurants, doctors, lawyers, wellness).
+                  Find authorized local sellers near you. Same brands, support
+                  your community, build local relationships. Products & services
+                  (restaurants, doctors, lawyers, wellness).
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Verified authorized local sellers</span>
+                    <span className="text-gray-700">
+                      Verified authorized local sellers
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Support your community businesses</span>
+                    <span className="text-gray-700">
+                      Support your community businesses
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Products + local services</span>
+                    <span className="text-gray-700">
+                      Products + local services
+                    </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">Build local relationships</span>
+                    <span className="text-gray-700">
+                      Build local relationships
+                    </span>
                   </li>
                 </ul>
                 <button
-                  onClick={() => navigate('/vendors/')}
+                  onClick={() => navigate("/vendors/")}
                   className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-all flex items-center justify-center gap-2 group-hover:scale-105"
                 >
                   Find Local Sellers
@@ -339,7 +446,7 @@ export function Homepage() {
 
           {/* Benefits Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.div 
+            <motion.div
               className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -351,11 +458,12 @@ export function Homepage() {
               </div>
               <h4 className="text-gray-900 mb-2">Verified Sellers</h4>
               <p className="text-sm text-gray-600">
-                All local sellers are authorized and verified with official badges
+                All local sellers are authorized and verified with official
+                badges
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -367,11 +475,12 @@ export function Homepage() {
               </div>
               <h4 className="text-gray-900 mb-2">Same Quality Brands</h4>
               <p className="text-sm text-gray-600">
-                Whether you shop national or local, you get the same premium brands
+                Whether you shop national or local, you get the same premium
+                brands
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -383,7 +492,8 @@ export function Homepage() {
               </div>
               <h4 className="text-gray-900 mb-2">Beyond Products</h4>
               <p className="text-sm text-gray-600">
-                Find local services too—restaurants, doctors, lawyers, wellness pros
+                Find local services too—restaurants, doctors, lawyers, wellness
+                pros
               </p>
             </motion.div>
           </div>
@@ -395,7 +505,7 @@ export function Homepage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1 - New Seller Discount */}
-            <motion.div 
+            <motion.div
               className="relative bg-gradient-to-br from-sky-500 to-sky-600 rounded-3xl overflow-hidden shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -404,13 +514,19 @@ export function Homepage() {
             >
               <div className="p-8 relative z-10">
                 <div className="mb-3">
-                  <span className="text-white/90 text-sm tracking-wide uppercase">UP TO 20% OFF</span>
+                  <span className="text-white/90 text-sm tracking-wide uppercase">
+                    UP TO 20% OFF
+                  </span>
                 </div>
                 <h3 className="text-white text-2xl mb-6 leading-tight">
-                  Get The Latest<br />Products From<br />Top Sellers
+                  Get The Latest
+                  <br />
+                  Products From
+                  <br />
+                  Top Sellers
                 </h3>
-                <button 
-                  onClick={() => navigate('/products/')}
+                <button
+                  onClick={() => navigate("/products/")}
                   className="bg-white text-gray-900 px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   SEE ALL
@@ -420,7 +536,7 @@ export function Homepage() {
             </motion.div>
 
             {/* Card 2 - Quality Products */}
-            <motion.div 
+            <motion.div
               className="relative bg-gradient-to-br from-sky-600 to-sky-700 rounded-3xl overflow-hidden shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -429,13 +545,19 @@ export function Homepage() {
             >
               <div className="p-8 relative z-10">
                 <div className="mb-3">
-                  <span className="text-white/90 text-sm tracking-wide uppercase">TRUSTED SELLERS</span>
+                  <span className="text-white/90 text-sm tracking-wide uppercase">
+                    TRUSTED SELLERS
+                  </span>
                 </div>
                 <h3 className="text-white text-2xl mb-6 leading-tight">
-                  Quality<br />Affordable<br />Products
+                  Quality
+                  <br />
+                  Affordable
+                  <br />
+                  Products
                 </h3>
-                <button 
-                  onClick={() => navigate('/vendors/')}
+                <button
+                  onClick={() => navigate("/vendors/")}
                   className="bg-white text-gray-900 px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   SEE ALL
@@ -445,7 +567,7 @@ export function Homepage() {
             </motion.div>
 
             {/* Card 3 - Mobile App Coming Soon */}
-            <motion.div 
+            <motion.div
               className="relative bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl overflow-hidden shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -454,13 +576,17 @@ export function Homepage() {
             >
               <div className="p-8 relative z-10">
                 <div className="mb-3">
-                  <span className="text-white/90 text-sm tracking-wide uppercase">COMING SOON!</span>
+                  <span className="text-white/90 text-sm tracking-wide uppercase">
+                    COMING SOON!
+                  </span>
                 </div>
                 <h3 className="text-white text-2xl mb-6 leading-tight">
-                  ShopLocal<br />Mobile App
+                  ShopLocal
+                  <br />
+                  Mobile App
                 </h3>
-                <button 
-                  onClick={() => navigate('/about/')}
+                <button
+                  onClick={() => navigate("/about/")}
                   className="bg-white text-gray-900 px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   SEE ALL
@@ -475,7 +601,7 @@ export function Homepage() {
       {/* 3. Featured Exclusive Brands */}
       <section className="py-24 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -484,81 +610,97 @@ export function Homepage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-50 border border-sky-200 rounded-full mb-4">
               <Sparkles className="w-4 h-4 text-sky-600" />
-              <span className="text-sm text-sky-900">Exclusive Partnerships</span>
+              <span className="text-sm text-sky-900">
+                Exclusive Partnerships
+              </span>
             </div>
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">Premium Brands You Trust</h2>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">
+              Premium Brands You Trust
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Shop exclusive collections from top brands partnered with ShopLocal for quality you can count on
+              Shop exclusive collections from top brands partnered with
+              ShopLocal for quality you can count on
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {/* Brand Cards */}
             {[
-              { 
-                icon: Leaf, 
-                label: 'Eco-Friendly',
-                description: 'Sustainable Products',
-                stats: 'EcoWear & More',
-                color: 'from-green-500 to-emerald-500',
-                delay: 0.1 
+              {
+                icon: Leaf,
+                label: "Eco-Friendly",
+                description: "Sustainable Products",
+                stats: "EcoWear & More",
+                color: "from-green-500 to-emerald-500",
+                delay: 0.1,
               },
-              { 
-                icon: Palette, 
-                label: 'Handmade Artisan',
-                description: 'Crafted with Care',
-                stats: 'Artisan Collection',
-                color: 'from-purple-500 to-pink-500',
-                delay: 0.2 
+              {
+                icon: Palette,
+                label: "Handmade Artisan",
+                description: "Crafted with Care",
+                stats: "Artisan Collection",
+                color: "from-purple-500 to-pink-500",
+                delay: 0.2,
               },
-              { 
-                icon: Pencil, 
-                label: 'Custom & Personalized',
-                description: 'Your Design, Our Craft',
-                stats: 'PrintPro Partners',
-                color: 'from-blue-500 to-cyan-500',
-                delay: 0.3 
+              {
+                icon: Pencil,
+                label: "Custom & Personalized",
+                description: "Your Design, Our Craft",
+                stats: "PrintPro Partners",
+                color: "from-blue-500 to-cyan-500",
+                delay: 0.3,
               },
-              { 
-                icon: Sparkles, 
-                label: 'Premium Brands',
-                description: 'Tech, Beauty & More',
-                stats: 'TechLife & NaturalGlow',
-                color: 'from-amber-500 to-orange-500',
-                delay: 0.4 
-              }
+              {
+                icon: Sparkles,
+                label: "Premium Brands",
+                description: "Tech, Beauty & More",
+                stats: "TechLife & NaturalGlow",
+                color: "from-amber-500 to-orange-500",
+                delay: 0.4,
+              },
             ].map((brand, index) => {
               const Icon = brand.icon;
               return (
-                <motion.div 
+                <motion.div
                   key={index}
-                  className="group relative bg-white rounded-2xl p-6 hover:shadow-2xl transition-all cursor-pointer border border-gray-200 hover:border-transparent overflow-hidden"
+                  className="group relative bg-white rounded-2xl p-6 hover:shadow-2xl cursor-pointer border border-gray-200 hover:border-transparent overflow-hidden"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ duration: 0.5, delay: brand.delay }}
-                  whileHover={{ y: -8 }}
+                  whileHover={{
+                    y: -8,
+                    transition: { duration: 0.3, ease: "easeOut" },
+                  }}
                 >
                   {/* Gradient background on hover */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${brand.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
-                  
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${brand.color} opacity-0 group-hover:opacity-5 transition-opacity`}
+                  />
+
                   {/* Icon with gradient background */}
                   <div className="relative mb-4">
-                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <div
+                      className={`w-16 h-16 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                    >
                       <Icon className="w-8 h-8 text-white" />
                     </div>
                   </div>
-                  
+
                   {/* Content */}
                   <div className="relative">
                     <h3 className="text-gray-900 mb-1">{brand.label}</h3>
-                    <p className="text-sm text-gray-500 mb-3">{brand.description}</p>
+                    <p className="text-sm text-gray-500 mb-3">
+                      {brand.description}
+                    </p>
                     <div className="flex items-center gap-2">
                       <div className="h-1 w-12 bg-gradient-to-r from-sky-500 to-blue-500 rounded-full" />
-                      <span className="text-xs text-gray-600">{brand.stats}</span>
+                      <span className="text-xs text-gray-600">
+                        {brand.stats}
+                      </span>
                     </div>
                   </div>
-                  
+
                   {/* Hover arrow indicator */}
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="w-5 h-5 text-sky-600" />
@@ -570,7 +712,7 @@ export function Homepage() {
 
           <div className="text-center">
             <button
-              onClick={() => navigate('/products/')}
+              onClick={() => navigate("/products/")}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all group shadow-lg hover:shadow-xl"
             >
               Explore All Brands
@@ -586,31 +728,37 @@ export function Homepage() {
       {/* 5. Top Categories */}
       <section className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">Shop by Category</h2>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">
+              Shop by Category
+            </h2>
             <p className="text-gray-600">
               Find exactly what you're looking for
             </p>
           </motion.div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((category, index) => {
               const Icon = iconMap[category.iconName];
               return (
                 <motion.button
                   key={category.name}
-                  onClick={() => navigate('/products/')}
-                  className="group bg-white rounded-2xl p-8 text-center hover:shadow-lg hover:shadow-gray-100/50 border border-gray-100 hover:border-gray-200 transition-all"
+                  onClick={() => navigate("/products/")}
+                  className="group bg-white rounded-2xl p-8 text-center hover:shadow-lg hover:shadow-gray-100/50 border border-gray-100 hover:border-gray-200"
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
+                  whileHover={{
+                    scale: 1.05,
+                    transition: { duration: 0.3, ease: "easeOut" },
+                  }}
                 >
                   <div className="flex justify-center mb-4">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -631,29 +779,65 @@ export function Homepage() {
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           {/* Section Header */}
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">Marketplace & Community</h2>
-            <p className="text-gray-600">Explore our diverse collection of products and services</p>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">
+              Marketplace & Community
+            </h2>
+            <p className="text-gray-600">
+              Explore our diverse collection of products and services
+            </p>
           </motion.div>
 
           {/* Main Category Tabs */}
           <div className="mb-8">
             <div className="flex flex-wrap gap-3 justify-center">
               {[
-                { icon: ShoppingBag, label: 'Products', color: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
-                { icon: UtensilsCrossed, label: 'Food', color: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
-                { icon: Key, label: 'Rentals', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
-                { icon: Wrench, label: 'Services', color: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
-                { icon: Recycle, label: 'Used Goods', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
-                { icon: Gavel, label: 'Auctions', color: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
-                { icon: Users, label: 'Local Community', color: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
-                { icon: Calendar, label: 'Events', color: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' }
+                {
+                  icon: ShoppingBag,
+                  label: "Products",
+                  color: "bg-gray-100 text-gray-700 hover:bg-gray-200",
+                },
+                {
+                  icon: UtensilsCrossed,
+                  label: "Food",
+                  color: "bg-pink-100 text-pink-700 hover:bg-pink-200",
+                },
+                {
+                  icon: Key,
+                  label: "Rentals",
+                  color: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+                },
+                {
+                  icon: Wrench,
+                  label: "Services",
+                  color: "bg-purple-100 text-purple-700 hover:bg-purple-200",
+                },
+                {
+                  icon: Recycle,
+                  label: "Used Goods",
+                  color: "bg-orange-100 text-orange-700 hover:bg-orange-200",
+                },
+                {
+                  icon: Gavel,
+                  label: "Auctions",
+                  color: "bg-amber-100 text-amber-700 hover:bg-amber-200",
+                },
+                {
+                  icon: Users,
+                  label: "Local Community",
+                  color: "bg-sky-100 text-sky-700 hover:bg-sky-200",
+                },
+                {
+                  icon: Calendar,
+                  label: "Events",
+                  color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200",
+                },
               ].map((category) => {
                 const Icon = category.icon;
                 return (
@@ -661,8 +845,8 @@ export function Homepage() {
                     key={category.label}
                     onClick={() => handleCategoryChange(category.label)}
                     className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${
-                      activeCategory === category.label 
-                        ? 'bg-sky-600 text-white shadow-lg scale-105' 
+                      activeCategory === category.label
+                        ? "bg-sky-600 text-white shadow-lg scale-105"
                         : category.color
                     }`}
                   >
@@ -685,8 +869,8 @@ export function Homepage() {
                     onClick={() => setActiveTab(tab)}
                     className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all ${
                       activeTab === tab
-                        ? 'bg-sky-600 text-white shadow-md scale-105'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                        ? "bg-sky-600 text-white shadow-md scale-105"
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     {SubIcon && <SubIcon className="w-4 h-4" />}
@@ -701,10 +885,10 @@ export function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredMarketplaceItems.length > 0 ? (
               filteredMarketplaceItems.map((item, index) => (
-                <motion.div 
-                  key={item.id} 
+                <motion.div
+                  key={item.id}
                   className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all group cursor-pointer"
-                  onClick={() => navigate('/products/')}
+                  onClick={() => navigate("/products/")}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
@@ -723,7 +907,9 @@ export function Homepage() {
                     )}
                   </div>
                   <div className="p-4 bg-white border-t-2 border-gray-200">
-                    <h3 className="text-sm text-gray-900 mb-1 line-clamp-1">{item.name}</h3>
+                    <h3 className="text-sm text-gray-900 mb-1 line-clamp-1">
+                      {item.name}
+                    </h3>
                     <div className="flex items-center justify-between">
                       <p className="text-sky-600">${item.price.toFixed(2)}</p>
                       {item.location && (
@@ -746,7 +932,7 @@ export function Homepage() {
           {/* View All Button */}
           <div className="text-center mt-12">
             <button
-              onClick={() => navigate('/products/')}
+              onClick={() => navigate("/products/")}
               className="inline-flex items-center gap-2 px-8 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-colors group shadow-lg"
             >
               View All Products
@@ -759,7 +945,7 @@ export function Homepage() {
       {/* 7. New Arrivals */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="flex items-end justify-between mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -767,20 +953,22 @@ export function Homepage() {
             transition={{ duration: 0.6 }}
           >
             <div>
-              <h2 className="text-4xl tracking-tight text-gray-900 mb-3">New Arrivals</h2>
+              <h2 className="text-4xl tracking-tight text-gray-900 mb-3">
+                New Arrivals
+              </h2>
               <p className="text-gray-600">
                 Latest products from our marketplace sellers
               </p>
             </div>
             <button
-              onClick={() => navigate('/products/')}
+              onClick={() => navigate("/products/")}
               className="hidden md:flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
             >
               View all
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {newProducts.map((product, index) => (
               <motion.div
@@ -804,22 +992,25 @@ export function Homepage() {
       {/* 8. Why Shop With Us */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">The Best of Both Worlds</h2>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-3">
+              The Best of Both Worlds
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Premium quality from exclusive brands meets the heart and soul of local makers
+              Premium quality from exclusive brands meets the heart and soul of
+              local makers
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* For Customers */}
-            <motion.div 
+            <motion.div
               className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 hover:shadow-xl transition-shadow"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -831,7 +1022,8 @@ export function Homepage() {
               </div>
               <h3 className="text-xl text-gray-900 mb-3">For Customers</h3>
               <p className="text-gray-600 mb-4">
-                Discover premium products and support your local makers — all in one trusted marketplace.
+                Discover premium products and support your local makers — all in
+                one trusted marketplace.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
@@ -850,7 +1042,7 @@ export function Homepage() {
             </motion.div>
 
             {/* For Brands */}
-            <motion.div 
+            <motion.div
               className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 hover:shadow-xl transition-shadow"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -862,7 +1054,8 @@ export function Homepage() {
               </div>
               <h3 className="text-xl text-gray-900 mb-3">For Brands</h3>
               <p className="text-gray-600 mb-4">
-                Access an engaged, values-driven audience that appreciates quality and authenticity.
+                Access an engaged, values-driven audience that appreciates
+                quality and authenticity.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
@@ -881,7 +1074,7 @@ export function Homepage() {
             </motion.div>
 
             {/* For Local Sellers */}
-            <motion.div 
+            <motion.div
               className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 hover:shadow-xl transition-shadow"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -893,7 +1086,8 @@ export function Homepage() {
               </div>
               <h3 className="text-xl text-gray-900 mb-3">For Local Sellers</h3>
               <p className="text-gray-600 mb-4">
-                Get visibility alongside national brands and reach customers who value local commerce.
+                Get visibility alongside national brands and reach customers who
+                value local commerce.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
@@ -914,16 +1108,273 @@ export function Homepage() {
         </div>
       </section>
 
+      {/* NEW: Subscription Plans Section */}
+      <section className="py-24 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-30">
+          <div className="absolute top-20 left-10 w-64 h-64 bg-sky-400 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border border-sky-200 rounded-full mb-4">
+              <Crown className="w-4 h-4 text-sky-600" />
+              <span className="text-sm text-sky-900">Unlock More Features</span>
+            </div>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-4">
+              Choose Your Plan
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Start selling with powerful tools to grow your business. From
+              individual sellers to enterprise brands.
+            </p>
+          </motion.div>
+
+          {/* Subscription Tier Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Free Tier */}
+            <motion.div
+              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.05 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Heart className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl text-gray-900 mb-2">Free</h3>
+              <div className="mb-4">
+                <span className="text-4xl text-gray-900">$0</span>
+                <span className="text-gray-600">/month</span>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Browse and claim your business listing
+              </p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Browse vendors</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Claim listings</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Basic profile</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Community support</span>
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate("/register")}
+                className="w-full py-3 px-6 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 rounded-lg transition-colors"
+              >
+                Get Started
+              </button>
+            </motion.div>
+
+            {/* Starter Plan */}
+            <motion.div
+              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                  <Store className="w-6 h-6 text-gray-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl text-gray-900 mb-2">Starter</h3>
+              <div className="mb-4">
+                <span className="text-4xl text-gray-900">$29</span>
+                <span className="text-gray-600">/month</span>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Perfect for individual sellers getting started
+              </p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Up to 10 products</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Basic analytics</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Email support</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>WooCommerce sync</span>
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate("/pricing")}
+                className="w-full py-3 px-6 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+              >
+                Get Started
+              </button>
+            </motion.div>
+
+            {/* Business Plan - POPULAR */}
+            <motion.div
+              className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl shadow-xl border-2 border-sky-400 p-8 relative hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="absolute -top-3 right-6 bg-white px-3 py-1 rounded-full text-xs text-sky-600 shadow-md">
+                Most Popular
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <h3 className="text-2xl text-white mb-2">Business</h3>
+              <div className="mb-4">
+                <span className="text-4xl text-white">$149</span>
+                <span className="text-white/80">/month</span>
+              </div>
+              <p className="text-white/90 mb-6">
+                Best for established businesses
+              </p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2 text-sm text-white">
+                  <CheckCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>Up to 200 products</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-white">
+                  <CheckCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>Premium analytics</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-white">
+                  <CheckCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>24/7 phone support</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-white">
+                  <CheckCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>Marketing tools</span>
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate("/pricing")}
+                className="w-full py-3 px-6 bg-white hover:bg-gray-50 text-sky-600 rounded-lg transition-colors shadow-lg"
+              >
+                Get Started
+              </button>
+            </motion.div>
+
+            {/* Enterprise Plan */}
+            <motion.div
+              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl text-gray-900 mb-2">Enterprise</h3>
+              <div className="mb-4">
+                <span className="text-4xl text-gray-900">$499</span>
+                <span className="text-gray-600">/month</span>
+              </div>
+              <p className="text-gray-600 mb-6">
+                For large brands and enterprises
+              </p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Unlimited products</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Custom analytics</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>Dedicated manager</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <span>White-label options</span>
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate("/pricing")}
+                className="w-full py-3 px-6 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+              >
+                Contact Sales
+              </button>
+            </motion.div>
+          </div>
+
+          {/* Bottom CTA */}
+          <motion.div
+            className="text-center mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            <p className="text-gray-600 mb-4">
+              All paid plans include our core features and 14-day free trial
+            </p>
+            <button
+              onClick={() => navigate("/pricing")}
+              className="inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 transition-colors group"
+            >
+              Compare all features
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </motion.div>
+        </div>
+      </section>
+
       {/* 9. How It Works */}
       <section className="py-24 bg-gradient-to-b from-gray-900 to-black text-white overflow-hidden relative">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-sky-600/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
+          <div
+            className="absolute top-20 left-10 w-72 h-72 rounded-full"
+            style={{
+              background: "rgba(14, 165, 233, 0.05)",
+              filter: "blur(100px)",
+            }}
+          />
+          <div
+            className="absolute bottom-20 right-10 w-96 h-96 rounded-full"
+            style={{
+              background: "rgba(37, 99, 235, 0.1)",
+              filter: "blur(80px)",
+            }}
+          />
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -936,45 +1387,46 @@ export function Homepage() {
             </div>
             <h2 className="text-4xl tracking-tight mb-3">How It Works</h2>
             <p className="text-gray-400">
-              Three simple steps to start shopping from local and premium sellers
+              Three simple steps to start shopping from local and premium
+              sellers
             </p>
           </motion.div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             {/* Connecting lines */}
             <div className="hidden md:block absolute top-24 left-1/3 w-1/3 h-0.5 bg-gradient-to-r from-sky-500/50 to-blue-500/50" />
             <div className="hidden md:block absolute top-24 left-2/3 w-1/3 h-0.5 bg-gradient-to-r from-blue-500/50 to-purple-500/50" />
-            
+
             {[
-              { 
-                step: '01', 
+              {
+                step: "01",
                 icon: Search,
-                title: 'Browse', 
-                desc: 'Discover unique products from independent sellers and premium brands',
-                color: 'from-sky-500 to-blue-500',
-                delay: 0.1
+                title: "Browse",
+                desc: "Discover unique products from independent sellers and premium brands",
+                color: "from-sky-500 to-blue-500",
+                delay: 0.1,
               },
-              { 
-                step: '02', 
+              {
+                step: "02",
                 icon: ShoppingCart,
-                title: 'Buy', 
-                desc: 'Securely purchase from multiple vendors in one seamless checkout',
-                color: 'from-blue-500 to-purple-500',
-                delay: 0.2
+                title: "Buy",
+                desc: "Securely purchase from multiple vendors in one seamless checkout",
+                color: "from-blue-500 to-purple-500",
+                delay: 0.2,
               },
-              { 
-                step: '03', 
+              {
+                step: "03",
                 icon: Heart,
-                title: 'Support', 
-                desc: 'Help small businesses and local makers grow with every purchase',
-                color: 'from-purple-500 to-pink-500',
-                delay: 0.3
-              }
+                title: "Support",
+                desc: "Help small businesses and local makers grow with every purchase",
+                color: "from-purple-500 to-pink-500",
+                delay: 0.3,
+              },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
-                <motion.div 
-                  key={i} 
+                <motion.div
+                  key={i}
                   className="relative group"
                   initial={{ opacity: 0, y: 50 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -987,18 +1439,22 @@ export function Homepage() {
                     <div className="absolute top-4 right-4 text-8xl font-light text-white/5 select-none">
                       {item.step}
                     </div>
-                    
+
                     {/* Icon with gradient */}
                     <div className="relative mb-6">
-                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                      <div
+                        className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}
+                      >
                         <Icon className="w-10 h-10 text-white" />
                       </div>
                     </div>
-                    
+
                     {/* Content */}
                     <div className="relative">
                       <div className="flex items-center gap-3 mb-3">
-                        <span className={`text-sm px-3 py-1 rounded-full bg-gradient-to-r ${item.color} text-white`}>
+                        <span
+                          className={`text-sm px-3 py-1 rounded-full bg-gradient-to-r ${item.color} text-white`}
+                        >
                           Step {item.step}
                         </span>
                       </div>
@@ -1009,7 +1465,7 @@ export function Homepage() {
                         {item.desc}
                       </p>
                     </div>
-                    
+
                     {/* Hover arrow */}
                     <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowRight className="w-6 h-6 text-sky-400" />
@@ -1019,9 +1475,9 @@ export function Homepage() {
               );
             })}
           </div>
-          
+
           {/* CTA Button */}
-          <motion.div 
+          <motion.div
             className="text-center mt-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1029,7 +1485,7 @@ export function Homepage() {
             transition={{ duration: 0.6, delay: 0.5 }}
           >
             <button
-              onClick={() => navigate('/products/')}
+              onClick={() => navigate("/products/")}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-xl hover:from-sky-500 hover:to-blue-500 transition-all group shadow-lg hover:shadow-xl"
             >
               Start Shopping Now
@@ -1043,7 +1499,9 @@ export function Homepage() {
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl tracking-tight text-gray-900 mb-4">Join Our Community</h2>
+            <h2 className="text-4xl tracking-tight text-gray-900 mb-4">
+              Join Our Community
+            </h2>
             <p className="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
               Share your ShopLocal finds and support local makers
             </p>
@@ -1055,21 +1513,27 @@ export function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 text-center">
               <div className="text-3xl mb-4">🏪</div>
-              <h3 className="text-xl text-gray-900 mb-2">Shop Global. Support Local.</h3>
+              <h3 className="text-xl text-gray-900 mb-2">
+                Shop Global. Support Local.
+              </h3>
               <p className="text-gray-600 text-sm">
                 Exclusive brands you trust, local makers you'll love
               </p>
             </div>
             <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 text-center">
               <div className="text-3xl mb-4">❤️</div>
-              <h3 className="text-xl text-gray-900 mb-2">Premium & Purpose-Driven</h3>
+              <h3 className="text-xl text-gray-900 mb-2">
+                Premium & Purpose-Driven
+              </h3>
               <p className="text-gray-600 text-sm">
                 Quality products that make a difference
               </p>
             </div>
             <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-8 text-center">
               <div className="text-3xl mb-4">✨</div>
-              <h3 className="text-xl text-gray-900 mb-2">Exclusives You Love</h3>
+              <h3 className="text-xl text-gray-900 mb-2">
+                Exclusives You Love
+              </h3>
               <p className="text-gray-600 text-sm">
                 Premium brands + local artisans in one place
               </p>
@@ -1084,22 +1548,26 @@ export function Homepage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-sky-600 rounded-2xl mb-6">
             <ArrowRight className="w-8 h-8 text-white" />
           </div>
-          
-          <h2 className="text-4xl tracking-tight text-gray-900 mb-4">Are You a Local Seller or Brand?</h2>
+
+          <h2 className="text-4xl tracking-tight text-gray-900 mb-4">
+            Are You a Local Seller or Brand?
+          </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Get visibility alongside premium brands and reach customers who value quality and community. Featured placements, local badges, and more.
+            Get visibility alongside premium brands and reach customers who
+            value quality and community. Featured placements, local badges, and
+            more.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/sell/')}
+              onClick={() => navigate("/sell/")}
               className="group px-8 py-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl transition-all inline-flex items-center justify-center gap-2"
             >
               Start Selling Today
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={() => navigate('/about/')}
+              onClick={() => navigate("/about/")}
               className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-200 transition-all"
             >
               Learn More
