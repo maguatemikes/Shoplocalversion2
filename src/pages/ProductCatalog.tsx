@@ -14,7 +14,7 @@ import {
 } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { calculateDistance } from '../lib/distance';
-import { getProducts } from '../api/woo/products';
+import { getProducts,getProductCategories,getProductBrands } from '../api/woo/products';
 import Loading from '../components/Loading';
 interface UserLocation {
   lat: number;
@@ -26,8 +26,12 @@ export function ProductCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [acceptsOffers, setAcceptsOffers] = useState(false);
+  const [product_categories,setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [brandFilter, setBrandFilter] = useState<string>('all');
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
+  const [product_brands,setBrands] = useState([]);
+  const [brandFilter, setBrandFilter] = useState<string>('');
+  const [searcht, setSearch] = useState<string>('');
   const [upcFilter, setUpcFilter] = useState<string>('');
   const [products_api, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,31 +47,67 @@ export function ProductCatalog() {
 
 useEffect(() => {
   fetchProducts(1);
+  fetchCategories();
+  fetchBrands();
 }, []);
 
-const fetchProducts = async (pageNumber: number) => {
+
+
+const fetchBrands = async () => {
+    try {
+    const data = await getProductBrands(); // make sure your API accepts page & per_page
+      setBrands(data);
+      console.log(data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+
+const fetchCategories = async () => {
+    try {
+    const data = await getProductCategories(); // make sure your API accepts page & per_page
+      setCategories(data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+const fetchProducts = async (
+  pageNumber: number,
+  category: string | null = selectedCategory,
+  brand: string | null = selectedBrand,
+  search: string | null = searcht
+) => {
+  console.log('loading..');
   setLoading(true);
+
   try {
-    const data = await getProducts(pageNumber, perPage); // make sure your API accepts page & per_page
+    // Pass category and brand to your API
+    const data = await getProducts(pageNumber, perPage, category, brand, search);
+
     if (pageNumber === 1) {
-      setProducts(data.mapped);
+      setProducts(data.products);
     } else {
-      setProducts(prev => [...prev, ...data.mapped]);
+      setProducts(prev => [...prev, ...data.products]);
     }
 
+    // Pagination logic
+    setHasMore(pageNumber * perPage < data.total);
+    if (data.products.length === 0) setHasMore(false);
 
-    // Check if more pages are available
-    setHasMore(pageNumber * perPage < data.res.total);
-    if(data.res.products.length ===  0){
-      setHasMore(false);
-    }
   } catch (err) {
     console.error(err);
   } finally {
     setLoading(false);
   }
 };
-  
+
+ 
 
 
 // Load more function
@@ -224,24 +264,24 @@ const Loader = () => {
     console.log("📍 User location cleared");
   };
 
-  const filteredProducts = products_api
-    .filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesOffers = !acceptsOffers || product.acceptsOffers;
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesBrand = brandFilter === 'all' || product.brand === brandFilter;
-      const matchesUpc = upcFilter === '' || product.upc?.includes(upcFilter);
+  const filteredProducts = products_api;
+  //   .filter((product) => {
+  //     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //       product.description.toLowerCase().includes(searchQuery.toLowerCase());
+  //     const matchesOffers = !acceptsOffers || product.acceptsOffers;
+  //     // const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+  //     const matchesBrand = brandFilter === 'all' || product.brand === brandFilter;
+  //     const matchesUpc = upcFilter === '' || product.upc?.includes(upcFilter);
       
-      return matchesSearch && matchesOffers && matchesCategory && matchesBrand && matchesUpc;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'popular') return b.isTrending ? 1 : -1;
-      if (sortBy === 'nearest' && a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
-      return 0;
-    });
+  //     return matchesSearch && matchesOffers && matchesBrand && matchesUpc;
+  //   })
+  //   .sort((a, b) => {
+  //     if (sortBy === 'price-low') return a.price - b.price;
+  //     if (sortBy === 'price-high') return b.price - a.price;
+  //     if (sortBy === 'popular') return b.isTrending ? 1 : -1;
+  //     if (sortBy === 'nearest' && a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
+  //     return 0;
+  //   });
 
   const categories = Array.from(new Set(products_api.map(p => p.category))).filter(Boolean);
   const hasActiveFilters = selectedCategory !== 'all' || acceptsOffers || brandFilter !== 'all' || upcFilter !== '';
@@ -285,8 +325,12 @@ const Loader = () => {
               <Input
                 type="text"
                 placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searcht}
+                  onChange={(e) => {
+                  const value = e.target.value;
+                  setSearch(value);
+                  fetchProducts(1, selectedCategory, selectedBrand, value);
+                  }}
                 className="pl-12 h-full rounded-xl border-gray-200 bg-gray-50"
               />
             </div>
@@ -321,11 +365,12 @@ const Loader = () => {
                   {hasActiveFilters && (
                     <button
                       onClick={() => {
-                        setSearchQuery('');
+                        setSearch('');
                         setSelectedCategory('all');
                         setAcceptsOffers(false);
                         setBrandFilter('all');
                         setUpcFilter('');
+                        fetchProducts(1);
                       }}
                       className="text-sm text-gray-600 hover:text-gray-900"
                     >
@@ -343,8 +388,12 @@ const Loader = () => {
                   <Input
                     type="text"
                     placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searcht}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearch(value);
+                      fetchProducts(1, selectedCategory, selectedBrand, value);
+                        }}
                     className="bg-gray-50 border-0 rounded-lg h-9"
                   />
                 </div>
@@ -355,17 +404,25 @@ const Loader = () => {
                     <Grid3x3 className="w-4 h-4 text-gray-600" />
                     <h4 className="text-sm text-gray-900">Category</h4>
                   </div>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Eco-Friendly">Eco-Friendly</SelectItem>
-                      <SelectItem value="Handmade">Handmade</SelectItem>
-                      <SelectItem value="Customizable">Customizable</SelectItem>
-                    </SelectContent>
-                  </Select>
+                      <Select
+                      value={selectedCategory}
+                      onValueChange={(value) => {
+                        setSelectedCategory(value);
+                        fetchProducts(1, value, selectedBrand); // pass current brand as well
+                      }}
+                    >
+                      <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem key={"all"}  value="all">All Categories</SelectItem>
+                        {product_categories.map((x) => (
+                          <SelectItem key={x.slug} value={x.slug}>
+                            {x.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                 </div>
 
                 {/* Brand Filter */}
@@ -374,18 +431,23 @@ const Loader = () => {
                     <Tag className="w-4 h-4 text-gray-600" />
                     <h4 className="text-sm text-gray-900">Brand</h4>
                   </div>
-                  <Select value={brandFilter} onValueChange={setBrandFilter}>
+                  <Select
+                    value={selectedBrand}
+                    onValueChange={(value) => {
+                      setSelectedBrand(value);
+                      fetchProducts(1, selectedCategory, value); // pass current category as well
+                    }}
+                  >
                     <SelectTrigger className="bg-gray-50 border-0 rounded-lg h-9">
                       <SelectValue placeholder="All Brands" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Brands</SelectItem>
-                      <SelectItem value="EcoWear">EcoWear</SelectItem>
-                      <SelectItem value="Artisan Collection">Artisan Collection</SelectItem>
-                      <SelectItem value="PrintPro">PrintPro</SelectItem>
-                      <SelectItem value="NaturalGlow">NaturalGlow</SelectItem>
-                      <SelectItem value="TechLife">TechLife</SelectItem>
-                      <SelectItem value="EcoHome">EcoHome</SelectItem>
+                      <SelectItem key={"all"}  value="all">All Brands</SelectItem>
+                      {product_brands.map((b) => (
+                        <SelectItem key={b.slug} value={b.slug}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -447,7 +509,7 @@ const Loader = () => {
               <div className="mb-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-gray-600">
-                    {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+                    {products_api.length} product{products_api.length !== 1 ? 's' : ''}
                   </p>
                   
                   <div className="flex flex-wrap items-center gap-2">
