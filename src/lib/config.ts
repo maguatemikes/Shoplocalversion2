@@ -1,12 +1,10 @@
 /**
- * Configuration file for ShopLocal Marketplace
- * Centralized configuration for API endpoints, feature flags, and app settings
- */
-
-/**
  * Main configuration object
  */
 export const config = {
+  // Base URL
+  apiBaseUrl: "https://shoplocal.kinsta.cloud",
+
   // API Endpoints
   api: {
     geodir: "https://shoplocal.kinsta.cloud/wp-json/geodir/v2",
@@ -14,6 +12,7 @@ export const config = {
     dokan: "https://shoplocal.kinsta.cloud/wp-json/dokan/v1",
     jwtAuth: "https://shoplocal.kinsta.cloud/wp-json/jwt-auth/v1",
     customApi: "https://shoplocal.kinsta.cloud/wp-json/custom-api/v1",
+    woocommerce: "https://shoplocal.kinsta.cloud/wp-json/wc/v3", // WooCommerce REST API
   },
 
   // Authentication
@@ -37,6 +36,18 @@ export const config = {
       register: "/wp/v2/users",
       validate: "/jwt-auth/v1/token/validate",
       refresh: "/jwt-auth/v1/token/refresh",
+    },
+  },
+
+  // WooCommerce API Configuration
+  woocommerce: {
+    consumerKey: "ck_f8fce61780d20ec55f6a4d17ed0c91660a9deb1e",
+    consumerSecret: "cs_08e819686104222fedbf055fee7dc4fd5313916d",
+    version: "v3",
+    // Generate WooCommerce Basic Auth header
+    get authHeader() {
+      const credentials = `${this.consumerKey}:${this.consumerSecret}`;
+      return btoa(credentials);
     },
   },
 
@@ -187,7 +198,7 @@ export const isFeatureEnabled = (
  * Get API endpoint URL
  */
 export const getApiUrl = (
-  service: "geodir" | "wordpress" | "dokan"
+  service: "geodir" | "wordpress" | "dokan" | "woocommerce"
 ): string => {
   return config.api[service];
 };

@@ -11,7 +11,7 @@
  * @module App
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -41,7 +41,7 @@ import { FAQ } from "./pages/FAQ";
 import { Cart } from "./pages/Cart";
 import { Checkout } from "./pages/Checkout";
 import { CustomerDashboard } from "./pages/CustomerDashboard";
-import { VendorDashboard } from "./pages/VendorDashboard";
+// import VendorDashboard from "./pages/VendorDashboard";
 import { Wishlist } from "./pages/Wishlist";
 import { OrderHistory } from "./pages/OrderHistory";
 import { UserProfile } from "./pages/UserProfile";
@@ -49,11 +49,16 @@ import { SearchResults } from "./pages/SearchResults";
 import { DealsPromotions } from "./pages/DealsPromotions";
 import { ClaimListing } from "./pages/ClaimListing";
 import { CreateListing } from "./pages/CreateListing";
+// import { CreateProduct } from "./pages/CreateProduct";
+// import { EditProduct } from "./pages/EditProduct";
+// import { SubscriptionPlans } from "./pages/SubscriptionPlans";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import UserDashboard from "./pages/UserDashboard";
 import GoogleCallback from "./pages/GoogleCallback";
 import AppleCallback from "./pages/AppleCallback";
+import OrderSuccess from "./pages/OrderSuccess";
+// import { AccountSettings } from "./pages/AccountSettings";
 import { vendors } from "./lib/mockData";
 import { Store } from "lucide-react";
 
@@ -102,6 +107,7 @@ function AppContent() {
               For new sellers to sign up and claim listings
               ============================================ */}
           <Route path="/sell" element={<BecomeSeller />} />
+          {/* <Route path="/pricing" element={<SubscriptionPlans />} /> */}
           <Route
             path="/claim-listing"
             element={
@@ -159,19 +165,26 @@ function AppContent() {
           <Route path="/my-account" element={<CustomerDashboard />} />
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="/profile" element={<UserProfile />} />
+          <Route
+            path="/account-settings"
+            element={
+              <ProtectedRoute>{/* <AccountSettings /> */}</ProtectedRoute>
+            }
+          />
 
           {/* ============================================
               VENDOR DASHBOARD ROUTES
               Vendor management and authentication
               ============================================ */}
-          <Route
+          {/* Temporarily disabled */}
+          {/* <Route
             path="/vendor-dashboard"
             element={
               <ProtectedRoute requiredRole="vendor">
                 <VendorDashboard />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route path="/vendor-login" element={<VendorLoginPage />} />
 
           {/* ============================================
@@ -189,6 +202,20 @@ function AppContent() {
                 <UserDashboard />
               </ProtectedRoute>
             }
+          />
+          <Route path="/order-success" element={<OrderSuccess />} />
+
+          {/* ============================================
+              PRODUCT CREATION ROUTE
+              Create products directly for WooCommerce
+              ============================================ */}
+          <Route
+            path="/create-product"
+            element={<ProtectedRoute>{/* <CreateProduct /> */}</ProtectedRoute>}
+          />
+          <Route
+            path="/edit-product/:id"
+            element={<ProtectedRoute>{/* <EditProduct /> */}</ProtectedRoute>}
           />
 
           {/* ============================================
@@ -209,7 +236,7 @@ function AppContent() {
  * VendorDetailWrapper Component
  *
  * Extracts the vendor slug from URL parameters and fetches the corresponding
- * vendor data. First checks location state (from API), then falls back to mockData.
+ * vendor data from GeoDirectory API. First checks location state, then fetches from API.
  * If vendor is not found, redirects to vendors directory.
  *
  * @returns {JSX.Element} VendorDetail page or VendorsDirectory if not found
@@ -218,27 +245,211 @@ function VendorDetailWrapper() {
   const { slug } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const [vendor, setVendor] = useState(state?.vendor);
+  const [loading, setLoading] = useState(!state?.vendor);
+  const [error, setError] = useState(false);
 
-  // First check if vendor was passed via navigation state (from API)
-  let vendor = state?.vendor;
+  useEffect(() => {
+    // If we already have vendor from state, don't fetch
+    if (state?.vendor) {
+      setVendor(state.vendor);
+      setLoading(false);
+      return;
+    }
 
-  // If not in state, try to find in mockData as fallback
-  if (!vendor) {
-    vendor = vendors.find((v) => v.slug === slug);
+    // Fetch vendor from GeoDirectory API
+    const fetchVendorFromAPI = async () => {
+      try {
+        setLoading(true);
+        console.log(
+          "🔍 VendorDetailWrapper: Fetching vendor from API with slug:",
+          slug
+        );
+
+        // Fetch all places from GeoDirectory API
+        const response = await fetch(
+          `https://shoplocal.kinsta.cloud/wp-json/geodir/v2/places?per_page=100`,
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const places = await response.json();
+
+        // Find the vendor by slug
+        const place = places.find((p: any) => {
+          const placeSlug =
+            p.slug ||
+            (typeof p.title === "string"
+              ? p.title
+                  .toLowerCase()
+                  .replace(/\s+/g, "-")
+                  .replace(/[^a-z0-9-]/g, "")
+              : p.title?.rendered
+                  ?.toLowerCase()
+                  .replace(/\s+/g, "-")
+                  .replace(/[^a-z0-9-]/g, ""));
+          return placeSlug === slug;
+        });
+
+        if (!place) {
+          console.warn(
+            `⚠️ Vendor not found for slug: ${slug} in GeoDirectory API`
+          );
+          setError(true);
+          setLoading(false);
+
+          // Redirect after a delay
+          const timer = setTimeout(() => {
+            navigate("/vendors", { replace: true });
+          }, 3000);
+
+          return () => clearTimeout(timer);
+        }
+
+        // Convert API place to Vendor format (same as VendorsDirectory.tsx)
+        const stripHtml = (html: string | null | undefined) => {
+          if (!html || typeof html !== "string") return "";
+          return html.replace(/<[^>]*>/g, "").trim();
+        };
+
+        const titleString =
+          typeof place.title === "string"
+            ? place.title
+            : place.title?.rendered || "Business";
+
+        const content = stripHtml(
+          typeof place.content === "string"
+            ? place.content
+            : place.content?.rendered
+        );
+
+        const thumbnailUrl =
+          place.featured_image?.thumbnail || place.images?.[0]?.thumbnail || "";
+        const fullImageUrl =
+          place.featured_image?.src || place.images?.[0]?.src || "";
+
+        const logo =
+          thumbnailUrl || fullImageUrl || "https://via.placeholder.com/150";
+        const banner =
+          fullImageUrl || thumbnailUrl || "https://via.placeholder.com/800x300";
+
+        let specialty = "General";
+        let categoryId: number | undefined;
+
+        if (place.default_category) {
+          categoryId = place.default_category;
+        }
+
+        if (place.post_category) {
+          if (typeof place.post_category === "string") {
+            specialty = place.post_category;
+          } else if (Array.isArray(place.post_category)) {
+            specialty = place.post_category
+              .map((cat: any) => cat.name)
+              .join(", ");
+            if (!categoryId && place.post_category.length > 0) {
+              categoryId = place.post_category[0].id;
+            }
+          } else if (typeof place.post_category === "object") {
+            specialty = place.post_category.name;
+            if (!categoryId) {
+              categoryId = place.post_category.id;
+            }
+          }
+        }
+
+        const customRating =
+          place.gd_custom_ratings ||
+          place.gd_custom_rating ||
+          place.acf?.rating ||
+          place.acf?.custom_rating ||
+          place.custom_rating ||
+          place.gd_rating ||
+          place.overall_rating ||
+          place.review_rating ||
+          place.rating ||
+          4.5;
+
+        const vendorData = {
+          id: place.id.toString(),
+          name: titleString,
+          slug: place.slug || slug,
+          dokanUsername: place.dokanUsername,
+          logo: logo,
+          banner: banner,
+          tagline: content.substring(0, 100) || "Quality local business",
+          bio: content || "A trusted local business in your community.",
+          specialty: specialty,
+          categoryId: categoryId,
+          rating:
+            typeof customRating === "number"
+              ? customRating
+              : parseFloat(String(customRating)) || 0,
+          location:
+            place.city && place.region
+              ? `${place.city}, ${place.region}`
+              : place.city || place.region || "Local",
+          latitude: place.latitude,
+          longitude: place.longitude,
+          claimed: place.claimed || 0,
+          socialLinks: {
+            website: place.website || undefined,
+            instagram: place.twitter || undefined,
+          },
+          policies: {
+            shipping:
+              place.special_offers ||
+              "Please contact us for shipping details and rates.",
+            returns:
+              "Returns accepted within 30 days. Please contact us for more information.",
+            faqs: "For any questions, please reach out to us directly.",
+          },
+        };
+
+        console.log("✅ VendorDetailWrapper: Vendor found:", vendorData.name);
+        setVendor(vendorData);
+        setLoading(false);
+      } catch (err: any) {
+        console.error("❌ VendorDetailWrapper: Error fetching vendor:", err);
+        setError(true);
+        setLoading(false);
+
+        // Redirect after a delay
+        const timer = setTimeout(() => {
+          navigate("/vendors", { replace: true });
+        }, 3000);
+
+        return () => clearTimeout(timer);
+      }
+    };
+
+    fetchVendorFromAPI();
+  }, [slug, state, navigate]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Store className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-xl text-gray-900 mb-2">Loading vendor...</h3>
+        </div>
+      </div>
+    );
   }
 
-  // Redirect to directory if vendor doesn't exist
-  useEffect(() => {
-    if (!vendor) {
-      console.warn(
-        `⚠️ Vendor not found for slug: ${slug}, redirecting to directory`
-      );
-      navigate("/vendors", { replace: true });
-    }
-  }, [vendor, slug, navigate]);
-
-  // Show loading while redirecting
-  if (!vendor) {
+  // Show error state
+  if (error || !vendor) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -246,7 +457,15 @@ function VendorDetailWrapper() {
             <Store className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-xl text-gray-900 mb-2">Vendor not found</h3>
-          <p className="text-gray-600">Redirecting to directory...</p>
+          <p className="text-gray-600 mb-4">
+            The vendor "{slug}" could not be found.
+          </p>
+          <button
+            onClick={() => navigate("/vendors")}
+            className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors"
+          >
+            Browse All Vendors
+          </button>
         </div>
       </div>
     );
